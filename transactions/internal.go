@@ -294,9 +294,9 @@ func (txb *Transaction) resolveMergeCoinsSources(sources []any) (*UnresolvedPara
 
 // Resolve Function
 func (txb *Transaction) resolveMoveFunction(pkg, mod, fn string, arguments []interface{}, typeArguments []string) (inputArguments []sui_types.Argument, inputTypeArguments []move_types.TypeTag, returnsCount int, err error) {
-	normalized, err := txb.client.GetNormalizedMoveFunction(types.GetNormalizedMoveFunctionParams{Package: pkg, Module: mod, Function: fn})
+	normalized, err := getNormalizedMoveFunctionFromCache(txb.client, pkg, mod, fn)
 	if err != nil {
-		return nil, nil, 0, fmt.Errorf("can not call jsonrpc to get normalized move function in command %d: %v", len(txb.builder.Commands), err)
+		return nil, nil, 0, fmt.Errorf("can not get normalized move function in command %d: %v", len(txb.builder.Commands), err)
 	}
 
 	if len(normalized.Parameters) > 0 && isTxContext(normalized.Parameters[len(normalized.Parameters)-1].SuiMoveNormalizedType) {
