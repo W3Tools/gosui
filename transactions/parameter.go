@@ -18,6 +18,7 @@ type UnresolvedArgument struct {
 	Pure     any
 	Object   *sui_types.ObjectArg
 	Argument *sui_types.Argument
+	resolved bool
 }
 type UnresolvedArguments []*UnresolvedArgument
 
@@ -56,12 +57,16 @@ func (up *UnresolvedParameter) resolveAndPArseToArguments(suiClient *client.SuiC
 }
 
 func (up *UnresolvedParameter) resolveObjects(suiClient *client.SuiClient) error {
-	if len(up.Objects) > 0 {
-		var ids []string
-		for _, resolve := range up.Objects {
+	var ids []string
+	for idx, resolve := range up.Objects {
+		if entry := cache.GetSharedObject(resolve.ObjectId); entry != nil {
+			up.Arguments[idx] = &UnresolvedArgument{Object: entry.ToObjectArg(resolve.Mutable), resolved: true}
+		} else {
 			ids = append(ids, resolve.ObjectId)
 		}
+	}
 
+	if len(ids) > 0 {
 		var objects []*types.SuiObjectResponse
 		objects, err := suiClient.MultiGetObjects(types.MultiGetObjectsParams{IDs: ids, Options: &types.SuiObjectDataOptions{ShowOwner: true}})
 		if err != nil {
@@ -80,6 +85,12 @@ func (up *UnresolvedParameter) resolveObjects(suiClient *client.SuiClient) error
 				return fmt.Errorf("can not resolve object at index %d, out of range", idx)
 			}
 
+			if argument := up.Arguments[idx]; argument != nil {
+				if argument.resolved {
+					continue
+				}
+			}
+
 			object := objectMap[utils.NormalizeSuiObjectId(resolveObject.ObjectId)]
 			if object == nil {
 				return fmt.Errorf("can not fetch object with id [%s] at index %d", resolveObject.ObjectId, idx)
@@ -91,6 +102,15 @@ func (up *UnresolvedParameter) resolveObjects(suiClient *client.SuiClient) error
 			}
 
 			up.Arguments[idx] = &UnresolvedArgument{Object: objectArg}
+
+			if objectArg.SharedObject != nil {
+				cache.AddSharedObject(
+					&SharedObjectCacheEntry{
+						ObjectId:             &objectArg.SharedObject.Id,
+						InitialSharedVersion: &objectArg.SharedObject.InitialSharedVersion,
+					},
+				)
+			}
 		}
 	}
 
