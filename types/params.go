@@ -83,11 +83,15 @@ type QueryTransactionBlocksParams struct {
 	SuiTransactionBlockResponseQuery SuiTransactionBlockResponseQuery    `json:",inline"`
 }
 
+type GetEventsParams struct {
+	Digest string `json:"digests"`
+}
+
 type QueryEventsParams struct {
-	Query  SuiEventFilter                      `json:"query"`
-	Cursor *EventId                            `json:"cursor,omitempty"`
-	Limit  *int                                `json:"limit,omitempty"`
-	Order  *QueryTransactionBlocksParams_Order `json:"order,omitempty"`
+	Query           SuiEventFilter `json:"query"`
+	Cursor          *EventId       `json:"cursor,omitempty"`
+	Limit           *int           `json:"limit,omitempty"`
+	DescendingOrder *bool          `json:"order,omitempty"` // default false(ascending order),
 }
 
 type GetProtocolConfigParams struct {

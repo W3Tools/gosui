@@ -28,16 +28,16 @@ type SuiObjectDataFilter struct {
 }
 
 type SuiEventFilter struct {
-	Sender          *string                         `json:"Sender,omitempty"`
-	Transaction     *string                         `json:"Transaction,omitempty"`
-	Package         *string                         `json:"Package,omitempty"`
+	Sender      *string `json:"Sender,omitempty"`
+	Transaction *string `json:"Transaction,omitempty"`
+	//Package         *string                         `json:"Package,omitempty"`
 	MoveModule      *SuiEventFilter_MoveModule      `json:"MoveModule,omitempty"`
 	MoveEventType   *string                         `json:"MoveEventType,omitempty"`
 	MoveEventModule *SuiEventFilter_MoveEventModule `json:"MoveEventModule,omitempty"`
-	MoveEventField  *SuiEventFilter_MoveEventField  `json:"MoveEventField,omitempty"`
-	TimeRange       *SuiEventFilter_TimeRange       `json:"TimeRange,omitempty"`
-	All             *SuiEventFilters                `json:"All,omitempty"`
-	Any             *SuiEventFilters                `json:"Any,omitempty"`
-	And             *SuiEventFilters                `json:"And,omitempty"`
-	Or              *SuiEventFilters                `json:"Or,omitempty"`
+	//MoveEventField  *SuiEventFilter_MoveEventField  `json:"MoveEventField,omitempty"`
+	TimeRange *SuiEventFilter_TimeRange `json:"TimeRange,omitempty"`
+	All       *SuiEventFilters          `json:"All,omitempty"`
+	Any       *SuiEventFilters          `json:"Any,omitempty"`
+	And       *SuiEventFilters          `json:"And,omitempty"`
+	Or        *SuiEventFilters          `json:"Or,omitempty"`
 }
