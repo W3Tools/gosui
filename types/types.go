@@ -122,7 +122,7 @@ type OwnedObjectRef struct {
 	Reference SuiObjectRef       `json:"reference"`
 }
 
-type SuiEvent struct {
+type SuiEventBase struct {
 	Id                EventId     `json:"id"`
 	PackageId         string      `json:"packageId"`
 	TransactionModule string      `json:"transactionModule"`
@@ -130,7 +130,11 @@ type SuiEvent struct {
 	Type              string      `json:"type"`
 	ParsedJson        interface{} `json:"parsedJson"`
 	Bcs               string      `json:"bcs"`
-	TimestampMs       string      `json:"timestampMs,omitempty"`
+}
+
+type SuiEvent struct {
+	SuiEventBase
+	TimestampMs string `json:"timestampMs,omitempty"`
 }
 
 type EventId struct {

@@ -356,17 +356,23 @@ func (client *SuiClient) SubscribeTransaction(input types.SubscribeTransactionPa
 	return nil, fmt.Errorf("unimplemented")
 }
 
+// SuiGetEvents implements the method `sui_getEvents`, gets transaction events.
+func (client *SuiClient) GetEvents(input types.GetEventsParams) (response []*types.SuiEventBase, err error) {
+	return response, client.request(
+		SuiTransportRequestOptions{
+			Method: "sui_getEvents",
+			Params: []any{input.Digest},
+		},
+		&response,
+	)
+}
+
 // Get events for a given query criteria
 func (client *SuiClient) QueryEvents(input types.QueryEventsParams) (response *types.PaginatedEvents, err error) {
-	var order bool = true
-	if input.Order != nil {
-		order = (input.Order == &types.Descending)
-	}
-
 	return response, client.request(
 		SuiTransportRequestOptions{
 			Method: "suix_queryEvents",
-			Params: []any{input.Query, input.Cursor, input.Limit, order},
+			Params: []any{input.Query, input.Cursor, input.Limit, input.DescendingOrder},
 		},
 		&response,
 	)
