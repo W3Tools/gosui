@@ -2,6 +2,7 @@ package client
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -9,7 +10,7 @@ import (
 	"reflect"
 )
 
-func (client *SuiClient) request(input SuiTransportRequestOptions, output interface{}) error {
+func (client *SuiClient) request(ctx context.Context, input SuiTransportRequestOptions, output interface{}) error {
 	reflectValue := reflect.ValueOf(output)
 	if output != nil && reflectValue.Kind() != reflect.Pointer {
 		return fmt.Errorf("output not a pointer or nil pointer")
@@ -25,7 +26,7 @@ func (client *SuiClient) request(input SuiTransportRequestOptions, output interf
 		return err
 	}
 
-	httpRequest, err := http.NewRequestWithContext(client.ctx, http.MethodPost, client.rpc, bytes.NewReader(jsb))
+	httpRequest, err := http.NewRequestWithContext(ctx, http.MethodPost, client.rpc, bytes.NewReader(jsb))
 	if err != nil {
 		return err
 	}

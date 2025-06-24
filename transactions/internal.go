@@ -1,6 +1,7 @@
 package transactions
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -32,9 +33,9 @@ func (txb *Transaction) createTransactionResult(count int) []*sui_types.Argument
 	return returnArguments
 }
 
-func setGasPrice(txb *Transaction) error {
+func setGasPrice(ctx context.Context, txb *Transaction) error {
 	if txb.GasConfig.Price == 0 {
-		referenceGasPrice, err := txb.client.GetReferenceGasPrice()
+		referenceGasPrice, err := txb.client.GetReferenceGasPrice(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to get reference gas price, err: %v", err)
 		}
@@ -45,11 +46,11 @@ func setGasPrice(txb *Transaction) error {
 	return nil
 }
 
-func setGasBudget(txb *Transaction) error {
+func setGasBudget(ctx context.Context, txb *Transaction) error {
 	if txb.GasConfig.Budget == 0 {
 		tx := *txb
 
-		dryRunResult, err := tx.DryRunTransactionBlock()
+		dryRunResult, err := tx.DryRunTransactionBlock(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to dry run transaction block, err: %v", err)
 		}
@@ -91,13 +92,13 @@ func setGasBudget(txb *Transaction) error {
 	return nil
 }
 
-func setGasPayment(txb *Transaction) error {
+func setGasPayment(ctx context.Context, txb *Transaction) error {
 	if len(txb.GasConfig.Payment) == 0 {
 		owner := txb.GasConfig.Owner
 		if owner == "" {
 			owner = txb.Sender.String()
 		}
-		coins, err := txb.client.GetCoins(types.GetCoinsParams{Owner: owner, CoinType: &utils.SUI_TYPE_ARG})
+		coins, err := txb.client.GetCoins(ctx, types.GetCoinsParams{Owner: owner, CoinType: &utils.SUI_TYPE_ARG})
 		if err != nil {
 			return fmt.Errorf("failed to get coins, err: %v", err)
 		}
@@ -293,8 +294,8 @@ func (txb *Transaction) resolveMergeCoinsSources(sources []any) (*UnresolvedPara
 }
 
 // Resolve Function
-func (txb *Transaction) resolveMoveFunction(pkg, mod, fn string, arguments []interface{}, typeArguments []string) (inputArguments []sui_types.Argument, inputTypeArguments []move_types.TypeTag, returnsCount int, err error) {
-	normalized, err := getNormalizedMoveFunctionFromCache(txb.client, pkg, mod, fn)
+func (txb *Transaction) resolveMoveFunction(ctx context.Context, pkg, mod, fn string, arguments []interface{}, typeArguments []string) (inputArguments []sui_types.Argument, inputTypeArguments []move_types.TypeTag, returnsCount int, err error) {
+	normalized, err := getNormalizedMoveFunctionFromCache(ctx, txb.client, pkg, mod, fn)
 	if err != nil {
 		return nil, nil, 0, fmt.Errorf("can not get normalized move function in command %d: %v", len(txb.builder.Commands), err)
 	}
@@ -317,7 +318,7 @@ func (txb *Transaction) resolveMoveFunction(pkg, mod, fn string, arguments []int
 		return nil, nil, 0, fmt.Errorf("can not resolve function arguments in command %d: %v", len(txb.builder.Commands), err)
 	}
 
-	inputArguments, err = unresolvedParameter.resolveAndPArseToArguments(txb.client, txb)
+	inputArguments, err = unresolvedParameter.resolveAndPArseToArguments(ctx, txb.client, txb)
 	if err != nil {
 		return nil, nil, 0, fmt.Errorf("can not parse unresolved parameter to arguments in command %d: %v", len(txb.builder.Commands), err)
 	}

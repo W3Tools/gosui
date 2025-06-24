@@ -33,7 +33,6 @@ func NewTransaction(client *client.SuiClient) *Transaction {
 	return &Transaction{
 		client:  client,
 		builder: sui_types.NewProgrammableTransactionBuilder(),
-		ctx:     client.Context(),
 
 		GasConfig: new(GasData),
 	}
@@ -60,7 +59,7 @@ func (txb *Transaction) Gas() *TransactionInputGasCoin {
 }
 
 // Split coins into multiple parts
-func (txb *Transaction) SplitCoins(coin interface{}, amounts []interface{}) (returnArguments []*sui_types.Argument, err error) {
+func (txb *Transaction) SplitCoins(ctx context.Context, coin interface{}, amounts []interface{}) (returnArguments []*sui_types.Argument, err error) {
 	if len(amounts) == 0 {
 		return nil, nil
 	}
@@ -76,7 +75,7 @@ func (txb *Transaction) SplitCoins(coin interface{}, amounts []interface{}) (ret
 	}
 
 	unresolvedParameter.merge(amountArguments)
-	arguments, err := unresolvedParameter.resolveAndPArseToArguments(txb.client, txb)
+	arguments, err := unresolvedParameter.resolveAndPArseToArguments(ctx, txb.client, txb)
 	if err != nil {
 		return nil, fmt.Errorf("can not resolve and parse to arguments in command %d, err: %v", len(txb.builder.Commands), err)
 	}
@@ -97,7 +96,7 @@ func (txb *Transaction) SplitCoins(coin interface{}, amounts []interface{}) (ret
 }
 
 // Transfer objects to address
-func (txb *Transaction) TransferObjects(objects []interface{}, address interface{}) error {
+func (txb *Transaction) TransferObjects(ctx context.Context, objects []interface{}, address interface{}) error {
 	if len(objects) == 0 {
 		return nil
 	}
@@ -113,7 +112,7 @@ func (txb *Transaction) TransferObjects(objects []interface{}, address interface
 	}
 
 	unresolvedParameter.merge(unresolvedAddressArgument)
-	arguments, err := unresolvedParameter.resolveAndPArseToArguments(txb.client, txb)
+	arguments, err := unresolvedParameter.resolveAndPArseToArguments(ctx, txb.client, txb)
 	if err != nil {
 		return fmt.Errorf("can not resolve and parse to arguments in command %d, err: %v", len(txb.builder.Commands), err)
 	}
@@ -134,7 +133,7 @@ func (txb *Transaction) TransferObjects(objects []interface{}, address interface
 }
 
 // Merge Coins into one
-func (txb *Transaction) MergeCoins(destination interface{}, sources []interface{}) (err error) {
+func (txb *Transaction) MergeCoins(ctx context.Context, destination interface{}, sources []interface{}) (err error) {
 	if len(sources) == 0 {
 		return nil
 	}
@@ -150,7 +149,7 @@ func (txb *Transaction) MergeCoins(destination interface{}, sources []interface{
 	}
 
 	unresolvedParameter.merge(unresolvedSourceParameter)
-	arguments, err := unresolvedParameter.resolveAndPArseToArguments(txb.client, txb)
+	arguments, err := unresolvedParameter.resolveAndPArseToArguments(ctx, txb.client, txb)
 	if err != nil {
 		return fmt.Errorf("can not resolve and parse to arguments in command %d, err: %v", len(txb.builder.Commands), err)
 	}
@@ -170,14 +169,14 @@ func (txb *Transaction) MergeCoins(destination interface{}, sources []interface{
 	return nil
 }
 
-func (txb *Transaction) MoveCall(target string, arguments []interface{}, typeArguments []string) (returnArguments []*sui_types.Argument, err error) {
+func (txb *Transaction) MoveCall(ctx context.Context, target string, arguments []interface{}, typeArguments []string) (returnArguments []*sui_types.Argument, err error) {
 	entry := strings.Split(target, "::")
 	if len(entry) != 3 {
 		return nil, fmt.Errorf("invalid target [%s]", target)
 	}
 	var pkg, mod, fn = utils.NormalizeSuiObjectId(entry[0]), entry[1], entry[2]
 
-	inputArguments, inputTypeArguments, returnsCount, err := txb.resolveMoveFunction(pkg, mod, fn, arguments, typeArguments)
+	inputArguments, inputTypeArguments, returnsCount, err := txb.resolveMoveFunction(ctx, pkg, mod, fn, arguments, typeArguments)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse function arguments, err: %v", err)
 	}
@@ -202,16 +201,16 @@ func (txb *Transaction) MoveCall(target string, arguments []interface{}, typeArg
 	return txb.createTransactionResult(returnsCount), nil
 }
 
-func (txb *Transaction) Build(sender string) (*sui_types.TransactionData, []byte, error) {
+func (txb *Transaction) Build(ctx context.Context, sender string) (*sui_types.TransactionData, []byte, error) {
 	txb.SetSenderIfNotSet(sender)
 
-	if err := setGasPrice(txb); err != nil {
+	if err := setGasPrice(ctx, txb); err != nil {
 		return nil, nil, fmt.Errorf("can not set gas price when building transaction: %v", err)
 	}
-	if err := setGasBudget(txb); err != nil {
+	if err := setGasBudget(ctx, txb); err != nil {
 		return nil, nil, fmt.Errorf("can not set gas budget when building transaction: %v", err)
 	}
-	if err := setGasPayment(txb); err != nil {
+	if err := setGasPayment(ctx, txb); err != nil {
 		return nil, nil, fmt.Errorf("can not set gas payment when building transaction: %v", err)
 	}
 
@@ -229,12 +228,12 @@ func (txb *Transaction) Build(sender string) (*sui_types.TransactionData, []byte
 	return &tx, bs, err
 }
 
-func (txb *Transaction) DryRunTransactionBlock() (*types.DryRunTransactionBlockResponse, error) {
+func (txb *Transaction) DryRunTransactionBlock(ctx context.Context) (*types.DryRunTransactionBlockResponse, error) {
 	if txb.Sender == nil {
 		return nil, fmt.Errorf("missing transaction sender")
 	}
 
-	if err := setGasPrice(txb); err != nil {
+	if err := setGasPrice(ctx, txb); err != nil {
 		return nil, fmt.Errorf("failed to set gas price, err: %v", err)
 	}
 
@@ -250,10 +249,10 @@ func (txb *Transaction) DryRunTransactionBlock() (*types.DryRunTransactionBlockR
 		return nil, fmt.Errorf("can not marshal transaction, err: %v", err)
 	}
 
-	return txb.client.DryRunTransactionBlock(types.DryRunTransactionBlockParams{TransactionBlock: bs})
+	return txb.client.DryRunTransactionBlock(ctx, types.DryRunTransactionBlockParams{TransactionBlock: bs})
 }
 
-func (txb *Transaction) DevInspectTransactionBlock() (*types.DevInspectResults, error) {
+func (txb *Transaction) DevInspectTransactionBlock(ctx context.Context) (*types.DevInspectResults, error) {
 	if txb.Sender == nil {
 		return nil, fmt.Errorf("missing transaction sender")
 	}
@@ -264,7 +263,7 @@ func (txb *Transaction) DevInspectTransactionBlock() (*types.DevInspectResults, 
 	}
 
 	txBytes := append([]byte{0}, bs...)
-	return txb.client.DevInspectTransactionBlock(types.DevInspectTransactionBlockParams{Sender: txb.Sender.String(), TransactionBlock: txBytes})
+	return txb.client.DevInspectTransactionBlock(ctx, types.DevInspectTransactionBlockParams{Sender: txb.Sender.String(), TransactionBlock: txBytes})
 }
 
 func (txb *Transaction) SetSender(sender string) {

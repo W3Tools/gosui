@@ -18,7 +18,6 @@ type SuiClientOptions struct {
 }
 
 type SuiClient struct {
-	ctx        context.Context
 	rpc        string
 	requestId  int
 	httpClient *http.Client
@@ -29,7 +28,7 @@ type SuiTransportRequestOptions struct {
 	Params []any  `json:"params"`
 }
 
-func NewSuiClient(ctx context.Context, rpc string) (*SuiClient, error) {
+func NewSuiClient(rpc string) (*SuiClient, error) {
 	_, err := url.ParseRequestURI(rpc)
 	if err != nil {
 		return nil, err
@@ -43,30 +42,36 @@ func NewSuiClient(ctx context.Context, rpc string) (*SuiClient, error) {
 		Timeout: 30 * time.Second,
 	}
 
-	return &SuiClient{ctx: ctx, rpc: rpc, requestId: 1, httpClient: httpClient}, nil
-}
-
-// Read only access to the client objects
-func (client SuiClient) Context() context.Context {
-	return client.ctx
+	return &SuiClient{rpc: rpc, requestId: 1, httpClient: httpClient}, nil
 }
 
 func (client SuiClient) RPC() string {
 	return client.rpc
 }
 
-// Invoke any RPC method
-func (client *SuiClient) Call(method string, params []any, response any) error {
-	return client.request(SuiTransportRequestOptions{Method: method, Params: params}, &response)
+func (client *SuiClient) Close() {
+	client.httpClient.CloseIdleConnections()
 }
 
-func (client *SuiClient) GetRpcApiVersion() (string, error) {
+// Invoke any RPC method
+func (client *SuiClient) Call(ctx context.Context, method string, params []any, response any) error {
+	return client.request(ctx, SuiTransportRequestOptions{Method: method, Params: params}, &response)
+}
+
+func (client *SuiClient) GetRpcApiVersion(ctx context.Context) (string, error) {
 	var response struct {
 		Info struct {
 			Version string `json:"version"`
 		} `json:"info"`
 	}
-	err := client.request(SuiTransportRequestOptions{Method: "rpc.discover", Params: []any{}}, &response)
+	err := client.request(
+		ctx,
+		SuiTransportRequestOptions{
+			Method: "rpc.discover",
+			Params: []any{},
+		},
+		&response,
+	)
 	if err != nil {
 		return "", err
 	}
@@ -75,7 +80,7 @@ func (client *SuiClient) GetRpcApiVersion() (string, error) {
 }
 
 // Get all Coin<`coin_type`> objects owned by an address.
-func (client *SuiClient) GetCoins(input types.GetCoinsParams) (response *types.PaginatedCoins, err error) {
+func (client *SuiClient) GetCoins(ctx context.Context, input types.GetCoinsParams) (response *types.PaginatedCoins, err error) {
 	if input.Owner == "" || !utils.IsValidSuiAddress(utils.NormalizeSuiAddress(input.Owner)) {
 		return nil, fmt.Errorf("invalid sui address")
 	}
@@ -86,6 +91,7 @@ func (client *SuiClient) GetCoins(input types.GetCoinsParams) (response *types.P
 	}
 
 	return response, client.request(
+		ctx,
 		SuiTransportRequestOptions{
 			Method: "suix_getCoins",
 			Params: []any{utils.NormalizeSuiAddress(input.Owner), input.CoinType, input.Cursor, input.Limit},
@@ -95,12 +101,13 @@ func (client *SuiClient) GetCoins(input types.GetCoinsParams) (response *types.P
 }
 
 // Get all Coin objects owned by an address.
-func (client *SuiClient) GetAllCoins(input types.GetAllCoinsParams) (response *types.PaginatedCoins, err error) {
+func (client *SuiClient) GetAllCoins(ctx context.Context, input types.GetAllCoinsParams) (response *types.PaginatedCoins, err error) {
 	if input.Owner == "" || !utils.IsValidSuiAddress(utils.NormalizeSuiAddress(input.Owner)) {
 		return nil, fmt.Errorf("invalid sui address")
 	}
 
 	return response, client.request(
+		ctx,
 		SuiTransportRequestOptions{
 			Method: "suix_getAllCoins",
 			Params: []any{utils.NormalizeSuiAddress(input.Owner), input.Cursor, input.Limit},
@@ -110,7 +117,7 @@ func (client *SuiClient) GetAllCoins(input types.GetAllCoinsParams) (response *t
 }
 
 // Get the total coin balance for one coin type, owned by the address owner.
-func (client *SuiClient) GetBalance(input types.GetBalanceParams) (response *types.Balance, err error) {
+func (client *SuiClient) GetBalance(ctx context.Context, input types.GetBalanceParams) (response *types.Balance, err error) {
 	if input.Owner == "" || !utils.IsValidSuiAddress(utils.NormalizeSuiAddress(input.Owner)) {
 		return nil, fmt.Errorf("invalid sui address")
 	}
@@ -121,6 +128,7 @@ func (client *SuiClient) GetBalance(input types.GetBalanceParams) (response *typ
 	}
 
 	return response, client.request(
+		ctx,
 		SuiTransportRequestOptions{
 			Method: "suix_getBalance",
 			Params: []any{utils.NormalizeSuiAddress(input.Owner), input.CoinType},
@@ -130,12 +138,13 @@ func (client *SuiClient) GetBalance(input types.GetBalanceParams) (response *typ
 }
 
 // Get the total coin balance for all coin types, owned by the address owner.
-func (client *SuiClient) GetAllBalances(input types.GetAllBalancesParams) (response []*types.Balance, err error) {
+func (client *SuiClient) GetAllBalances(ctx context.Context, input types.GetAllBalancesParams) (response []*types.Balance, err error) {
 	if input.Owner == "" || !utils.IsValidSuiAddress(utils.NormalizeSuiAddress(input.Owner)) {
 		return nil, fmt.Errorf("invalid sui address")
 	}
 
 	return response, client.request(
+		ctx,
 		SuiTransportRequestOptions{
 			Method: "suix_getAllBalances",
 			Params: []any{utils.NormalizeSuiAddress(input.Owner)},
@@ -145,12 +154,13 @@ func (client *SuiClient) GetAllBalances(input types.GetAllBalancesParams) (respo
 }
 
 // Fetch CoinMetadata for a given coin type
-func (client *SuiClient) GetCoinMetadata(input types.GetCoinMetadataParams) (response *types.CoinMetadata, err error) {
+func (client *SuiClient) GetCoinMetadata(ctx context.Context, input types.GetCoinMetadataParams) (response *types.CoinMetadata, err error) {
 	if input.CoinType != "" {
 		input.CoinType = utils.NormalizeSuiCoinType(input.CoinType)
 	}
 
 	return response, client.request(
+		ctx,
 		SuiTransportRequestOptions{
 			Method: "suix_getCoinMetadata",
 			Params: []any{input.CoinType},
@@ -160,12 +170,13 @@ func (client *SuiClient) GetCoinMetadata(input types.GetCoinMetadataParams) (res
 }
 
 // Fetch total supply for a coin
-func (client *SuiClient) GetTotalSupply(input types.GetTotalSupplyParams) (response *types.CoinSupply, err error) {
+func (client *SuiClient) GetTotalSupply(ctx context.Context, input types.GetTotalSupplyParams) (response *types.CoinSupply, err error) {
 	if input.CoinType != "" {
 		input.CoinType = utils.NormalizeSuiCoinType(input.CoinType)
 	}
 
 	return response, client.request(
+		ctx,
 		SuiTransportRequestOptions{
 			Method: "suix_getTotalSupply",
 			Params: []any{input.CoinType},
@@ -175,12 +186,13 @@ func (client *SuiClient) GetTotalSupply(input types.GetTotalSupplyParams) (respo
 }
 
 // Get details about an object
-func (client *SuiClient) GetObject(input types.GetObjectParams) (response *types.SuiObjectResponse, err error) {
+func (client *SuiClient) GetObject(ctx context.Context, input types.GetObjectParams) (response *types.SuiObjectResponse, err error) {
 	if input.ID == "" || !utils.IsValidSuiObjectId(utils.NormalizeSuiObjectId(input.ID)) {
 		return nil, fmt.Errorf("invalid sui object id")
 	}
 
 	return response, client.request(
+		ctx,
 		SuiTransportRequestOptions{
 			Method: "sui_getObject",
 			Params: []any{utils.NormalizeSuiObjectId(input.ID), input.Options},
@@ -190,7 +202,7 @@ func (client *SuiClient) GetObject(input types.GetObjectParams) (response *types
 }
 
 // Batch get details about a list of objects. If any of the object ids are duplicates the call will fail
-func (client *SuiClient) MultiGetObjects(input types.MultiGetObjectsParams) (response []*types.SuiObjectResponse, err error) {
+func (client *SuiClient) MultiGetObjects(ctx context.Context, input types.MultiGetObjectsParams) (response []*types.SuiObjectResponse, err error) {
 	idmap, ids := make(map[string]struct{}, 0), make([]string, 0)
 	for _, id := range input.IDs {
 		normalized := utils.NormalizeSuiObjectId(id)
@@ -205,6 +217,7 @@ func (client *SuiClient) MultiGetObjects(input types.MultiGetObjectsParams) (res
 	}
 
 	return response, client.request(
+		ctx,
 		SuiTransportRequestOptions{
 			Method: "sui_multiGetObjects",
 			Params: []any{ids, input.Options},
@@ -214,12 +227,13 @@ func (client *SuiClient) MultiGetObjects(input types.MultiGetObjectsParams) (res
 }
 
 // Get all objects owned by an address
-func (client *SuiClient) GetOwnedObjects(input types.GetOwnedObjectsParams) (response *types.PaginatedObjectsResponse, err error) {
+func (client *SuiClient) GetOwnedObjects(ctx context.Context, input types.GetOwnedObjectsParams) (response *types.PaginatedObjectsResponse, err error) {
 	if input.Owner == "" || !utils.IsValidSuiAddress(utils.NormalizeSuiAddress(input.Owner)) {
 		return nil, fmt.Errorf("invalid sui address")
 	}
 
 	return response, client.request(
+		ctx,
 		SuiTransportRequestOptions{
 			Method: "suix_getOwnedObjects",
 			Params: []any{
@@ -237,8 +251,9 @@ func (client *SuiClient) GetOwnedObjects(input types.GetOwnedObjectsParams) (res
 }
 
 // Return the object information for a specified version
-func (client *SuiClient) TryGetPastObject(input types.TryGetPastObjectParams) (response *types.ObjectReadWrapper, err error) {
+func (client *SuiClient) TryGetPastObject(ctx context.Context, input types.TryGetPastObjectParams) (response *types.ObjectReadWrapper, err error) {
 	return response, client.request(
+		ctx,
 		SuiTransportRequestOptions{
 			Method: "sui_tryGetPastObject",
 			Params: []any{utils.NormalizeSuiObjectId(input.ID), input.Version, input.Options},
@@ -248,12 +263,13 @@ func (client *SuiClient) TryGetPastObject(input types.TryGetPastObjectParams) (r
 }
 
 // Return the list of dynamic field objects owned by an object
-func (client *SuiClient) GetDynamicFields(input types.GetDynamicFieldsParams) (response *types.DynamicFieldPage, err error) {
+func (client *SuiClient) GetDynamicFields(ctx context.Context, input types.GetDynamicFieldsParams) (response *types.DynamicFieldPage, err error) {
 	if input.ParentId == "" || !utils.IsValidSuiObjectId(utils.NormalizeSuiObjectId(input.ParentId)) {
 		return nil, fmt.Errorf("invalid sui object id")
 	}
 
 	return response, client.request(
+		ctx,
 		SuiTransportRequestOptions{
 			Method: "suix_getDynamicFields",
 			Params: []any{utils.NormalizeSuiObjectId(input.ParentId), input.Cursor, input.Limit},
@@ -263,8 +279,9 @@ func (client *SuiClient) GetDynamicFields(input types.GetDynamicFieldsParams) (r
 }
 
 // Return the dynamic field object information for a specified object
-func (client *SuiClient) GetDynamicFieldObject(input types.GetDynamicFieldObjectParams) (response *types.SuiObjectResponse, err error) {
+func (client *SuiClient) GetDynamicFieldObject(ctx context.Context, input types.GetDynamicFieldObjectParams) (response *types.SuiObjectResponse, err error) {
 	return response, client.request(
+		ctx,
 		SuiTransportRequestOptions{
 			Method: "suix_getDynamicFieldObject",
 			Params: []any{input.ParentId, input.Name},
@@ -273,12 +290,13 @@ func (client *SuiClient) GetDynamicFieldObject(input types.GetDynamicFieldObject
 	)
 }
 
-func (client *SuiClient) GetTransactionBlock(input types.GetTransactionBlockParams) (response *types.SuiTransactionBlockResponse, err error) {
+func (client *SuiClient) GetTransactionBlock(ctx context.Context, input types.GetTransactionBlockParams) (response *types.SuiTransactionBlockResponse, err error) {
 	if !utils.IsValidTransactionDigest(input.Digest) {
 		return nil, fmt.Errorf("invalid transaction digest")
 	}
 
 	return response, client.request(
+		ctx,
 		SuiTransportRequestOptions{
 			Method: "sui_getTransactionBlock",
 			Params: []any{input.Digest, input.Options},
@@ -287,7 +305,7 @@ func (client *SuiClient) GetTransactionBlock(input types.GetTransactionBlockPara
 	)
 }
 
-func (client *SuiClient) MultiGetTransactionBlocks(input types.MultiGetTransactionBlocksParams) (response []*types.SuiTransactionBlockResponse, err error) {
+func (client *SuiClient) MultiGetTransactionBlocks(ctx context.Context, input types.MultiGetTransactionBlocksParams) (response []*types.SuiTransactionBlockResponse, err error) {
 	digestmap, digests := make(map[string]struct{}, 0), make([]string, 0)
 	for _, digest := range input.Digests {
 		if digest == "" || !utils.IsValidTransactionDigest(digest) {
@@ -301,6 +319,7 @@ func (client *SuiClient) MultiGetTransactionBlocks(input types.MultiGetTransacti
 	}
 
 	return response, client.request(
+		ctx,
 		SuiTransportRequestOptions{
 			Method: "sui_multiGetTransactionBlocks",
 			Params: []any{digests, input.Options},
@@ -310,30 +329,27 @@ func (client *SuiClient) MultiGetTransactionBlocks(input types.MultiGetTransacti
 }
 
 // Get transaction blocks for a given query criteria
-func (client *SuiClient) QueryTransactionBlocks(input types.QueryTransactionBlocksParams) (response *types.PaginatedTransactionResponse, err error) {
+func (client *SuiClient) QueryTransactionBlocks(ctx context.Context, input types.QueryTransactionBlocksParams) (response *types.PaginatedTransactionResponse, err error) {
 	var order bool = true
 	if input.Order != nil {
 		order = (input.Order == &types.Descending)
 	}
 
 	return response, client.request(
+		ctx,
 		SuiTransportRequestOptions{
 			Method: "suix_queryTransactionBlocks",
-			Params: []any{
-				input.SuiTransactionBlockResponseQuery,
-				input.Cursor,
-				input.Limit,
-				&order,
-			},
+			Params: []any{input.SuiTransactionBlockResponseQuery, input.Cursor, input.Limit, &order},
 		},
 		&response,
 	)
 }
 
 // Get total number of transactions
-func (client *SuiClient) GetTotalTransactionBlocks() (response *big.Int, err error) {
+func (client *SuiClient) GetTotalTransactionBlocks(ctx context.Context) (response *big.Int, err error) {
 	var response_ string
 	err = client.request(
+		ctx,
 		SuiTransportRequestOptions{
 			Method: "sui_getTotalTransactionBlocks",
 			Params: []any{},
@@ -352,13 +368,14 @@ func (client *SuiClient) GetTotalTransactionBlocks() (response *big.Int, err err
 	return response, nil
 }
 
-func (client *SuiClient) SubscribeTransaction(input types.SubscribeTransactionParams) (response any, err error) {
+func (client *SuiClient) SubscribeTransaction(ctx context.Context, input types.SubscribeTransactionParams) (response any, err error) {
 	return nil, fmt.Errorf("unimplemented")
 }
 
 // SuiGetEvents implements the method `sui_getEvents`, gets transaction events.
-func (client *SuiClient) GetEvents(input types.GetEventsParams) (response []*types.SuiEventBase, err error) {
+func (client *SuiClient) GetEvents(ctx context.Context, input types.GetEventsParams) (response []*types.SuiEventBase, err error) {
 	return response, client.request(
+		ctx,
 		SuiTransportRequestOptions{
 			Method: "sui_getEvents",
 			Params: []any{input.Digest},
@@ -368,8 +385,9 @@ func (client *SuiClient) GetEvents(input types.GetEventsParams) (response []*typ
 }
 
 // Get events for a given query criteria
-func (client *SuiClient) QueryEvents(input types.QueryEventsParams) (response *types.PaginatedEvents, err error) {
+func (client *SuiClient) QueryEvents(ctx context.Context, input types.QueryEventsParams) (response *types.PaginatedEvents, err error) {
 	return response, client.request(
+		ctx,
 		SuiTransportRequestOptions{
 			Method: "suix_queryEvents",
 			Params: []any{input.Query, input.Cursor, input.Limit, input.DescendingOrder},
@@ -379,12 +397,13 @@ func (client *SuiClient) QueryEvents(input types.QueryEventsParams) (response *t
 }
 
 // Subscribe to get notifications whenever an event matching the filter occurs
-func (client *SuiClient) SubscribeEvent(input types.SubscribeEventParams) (response any, err error) {
+func (client *SuiClient) SubscribeEvent(ctx context.Context, input types.SubscribeEventParams) (response any, err error) {
 	return nil, fmt.Errorf("unimplemented")
 }
 
-func (client *SuiClient) GetProtocolConfig(input types.GetProtocolConfigParams) (response *types.ProtocolConfig, err error) {
+func (client *SuiClient) GetProtocolConfig(ctx context.Context, input types.GetProtocolConfigParams) (response *types.ProtocolConfig, err error) {
 	return response, client.request(
+		ctx,
 		SuiTransportRequestOptions{
 			Method: "sui_getProtocolConfig",
 			Params: []any{input.Version},
@@ -394,8 +413,9 @@ func (client *SuiClient) GetProtocolConfig(input types.GetProtocolConfigParams) 
 }
 
 // Get the sequence number of the latest checkpoint that has been executed
-func (client *SuiClient) GetLatestCheckpointSequenceNumber() (response string, err error) {
+func (client *SuiClient) GetLatestCheckpointSequenceNumber(ctx context.Context) (response string, err error) {
 	return response, client.request(
+		ctx,
 		SuiTransportRequestOptions{
 			Method: "sui_getLatestCheckpointSequenceNumber",
 			Params: []any{},
@@ -405,8 +425,9 @@ func (client *SuiClient) GetLatestCheckpointSequenceNumber() (response string, e
 }
 
 // Returns information about a given checkpoint
-func (client *SuiClient) GetCheckpoint(input types.GetCheckpointParams) (response *types.Checkpoint, err error) {
+func (client *SuiClient) GetCheckpoint(ctx context.Context, input types.GetCheckpointParams) (response *types.Checkpoint, err error) {
 	return response, client.request(
+		ctx,
 		SuiTransportRequestOptions{
 			Method: "sui_getCheckpoint",
 			Params: []any{input.ID},
@@ -416,8 +437,9 @@ func (client *SuiClient) GetCheckpoint(input types.GetCheckpointParams) (respons
 }
 
 // Returns historical checkpoints paginated
-func (client *SuiClient) GetCheckpoints(input types.GetCheckpointsParams) (response *types.CheckpointPage, err error) {
+func (client *SuiClient) GetCheckpoints(ctx context.Context, input types.GetCheckpointsParams) (response *types.CheckpointPage, err error) {
 	return response, client.request(
+		ctx,
 		SuiTransportRequestOptions{
 			Method: "sui_getCheckpoints",
 			Params: []any{input.Cursor, input.Limit, input.DescendingOrder},
@@ -427,9 +449,10 @@ func (client *SuiClient) GetCheckpoints(input types.GetCheckpointsParams) (respo
 }
 
 // Getting the reference gas price for the network
-func (client *SuiClient) GetReferenceGasPrice() (response *big.Int, err error) {
+func (client *SuiClient) GetReferenceGasPrice(ctx context.Context) (response *big.Int, err error) {
 	var response_ string
 	err = client.request(
+		ctx,
 		SuiTransportRequestOptions{
 			Method: "suix_getReferenceGasPrice",
 			Params: []any{},
@@ -449,8 +472,9 @@ func (client *SuiClient) GetReferenceGasPrice() (response *big.Int, err error) {
 }
 
 // Return the latest system state content.
-func (client *SuiClient) GetLatestSuiSystemState() (response *types.SuiSystemStateSummary, err error) {
+func (client *SuiClient) GetLatestSuiSystemState(ctx context.Context) (response *types.SuiSystemStateSummary, err error) {
 	return response, client.request(
+		ctx,
 		SuiTransportRequestOptions{
 			Method: "suix_getLatestSuiSystemState",
 			Params: []any{},
@@ -460,8 +484,9 @@ func (client *SuiClient) GetLatestSuiSystemState() (response *types.SuiSystemSta
 }
 
 // Return the committee information for the asked epoch
-func (client *SuiClient) GetCommitteeInfo(input types.GetCommitteeInfoParams) (response *types.CommitteeInfo, err error) {
+func (client *SuiClient) GetCommitteeInfo(ctx context.Context, input types.GetCommitteeInfoParams) (response *types.CommitteeInfo, err error) {
 	return response, client.request(
+		ctx,
 		SuiTransportRequestOptions{
 			Method: "suix_getCommitteeInfo",
 			Params: []any{input.Epoch},
@@ -471,8 +496,9 @@ func (client *SuiClient) GetCommitteeInfo(input types.GetCommitteeInfoParams) (r
 }
 
 // Return the Validators APYs
-func (client *SuiClient) GetValidatorsApy() (response *types.ValidatorsApy, err error) {
+func (client *SuiClient) GetValidatorsApy(ctx context.Context) (response *types.ValidatorsApy, err error) {
 	return response, client.request(
+		ctx,
 		SuiTransportRequestOptions{
 			Method: "suix_getValidatorsApy",
 			Params: []any{},
@@ -481,8 +507,9 @@ func (client *SuiClient) GetValidatorsApy() (response *types.ValidatorsApy, err 
 	)
 }
 
-func (client *SuiClient) GetChainIdentifier() (response string, err error) {
+func (client *SuiClient) GetChainIdentifier(ctx context.Context) (response string, err error) {
 	return response, client.request(
+		ctx,
 		SuiTransportRequestOptions{
 			Method: "sui_getChainIdentifier",
 			Params: []any{},
@@ -492,12 +519,13 @@ func (client *SuiClient) GetChainIdentifier() (response string, err error) {
 }
 
 // Return the delegated stakes for an address
-func (client *SuiClient) GetStakes(input types.GetStakesParams) (response []*types.DelegatedStake, err error) {
+func (client *SuiClient) GetStakes(ctx context.Context, input types.GetStakesParams) (response []*types.DelegatedStake, err error) {
 	if input.Owner == "" || !utils.IsValidSuiObjectId(utils.NormalizeSuiObjectId(input.Owner)) {
 		return nil, fmt.Errorf("invalid sui address")
 	}
 
 	return response, client.request(
+		ctx,
 		SuiTransportRequestOptions{
 			Method: "suix_getStakes",
 			Params: []any{utils.NormalizeSuiObjectId(input.Owner)},
@@ -507,7 +535,7 @@ func (client *SuiClient) GetStakes(input types.GetStakesParams) (response []*typ
 }
 
 // Return the delegated stakes queried by id.
-func (client *SuiClient) GetStakesByIds(input types.GetStakesByIdsParams) (response []*types.DelegatedStake, err error) {
+func (client *SuiClient) GetStakesByIds(ctx context.Context, input types.GetStakesByIdsParams) (response []*types.DelegatedStake, err error) {
 	idmap, ids := make(map[string]struct{}, 0), make([]string, 0)
 	for _, id := range input.StakedSuiIds {
 		normalized := utils.NormalizeSuiObjectId(id)
@@ -522,6 +550,7 @@ func (client *SuiClient) GetStakesByIds(input types.GetStakesByIdsParams) (respo
 	}
 
 	return response, client.request(
+		ctx,
 		SuiTransportRequestOptions{
 			Method: "suix_getStakesByIds",
 			Params: []any{ids},
@@ -530,8 +559,9 @@ func (client *SuiClient) GetStakesByIds(input types.GetStakesByIdsParams) (respo
 	)
 }
 
-func (client *SuiClient) ResolveNameServiceNames(input types.ResolveNameServiceNamesParams) (response *types.ResolvedNameServiceNames, err error) {
+func (client *SuiClient) ResolveNameServiceNames(ctx context.Context, input types.ResolveNameServiceNamesParams) (response *types.ResolvedNameServiceNames, err error) {
 	return response, client.request(
+		ctx,
 		SuiTransportRequestOptions{
 			Method: "suix_resolveNameServiceNames",
 			Params: []any{input.Address, input.Cursor, input.Limit},
@@ -540,8 +570,9 @@ func (client *SuiClient) ResolveNameServiceNames(input types.ResolveNameServiceN
 	)
 }
 
-func (client *SuiClient) ResolveNameServiceAddress(input types.ResolveNameServiceAddressParams) (response string, err error) {
+func (client *SuiClient) ResolveNameServiceAddress(ctx context.Context, input types.ResolveNameServiceAddressParams) (response string, err error) {
 	return response, client.request(
+		ctx,
 		SuiTransportRequestOptions{
 			Method: "suix_resolveNameServiceAddress",
 			Params: []any{input.Name},
@@ -551,8 +582,9 @@ func (client *SuiClient) ResolveNameServiceAddress(input types.ResolveNameServic
 }
 
 // Get Move function argument types like read, write and full access
-func (client *SuiClient) GetMoveFunctionArgTypes(input types.GetMoveFunctionArgTypesParams) (response []types.SuiMoveFunctionArgTypeWrapper, err error) {
+func (client *SuiClient) GetMoveFunctionArgTypes(ctx context.Context, input types.GetMoveFunctionArgTypesParams) (response []types.SuiMoveFunctionArgTypeWrapper, err error) {
 	return response, client.request(
+		ctx,
 		SuiTransportRequestOptions{
 			Method: "sui_getMoveFunctionArgTypes",
 			Params: []any{utils.NormalizeSuiObjectId(input.Package), input.Module, input.Function},
@@ -562,8 +594,9 @@ func (client *SuiClient) GetMoveFunctionArgTypes(input types.GetMoveFunctionArgT
 }
 
 // Get a map from module name to structured representations of Move modules
-func (client *SuiClient) GetNormalizedMoveModulesByPackage(input types.GetNormalizedMoveModulesByPackageParams) (response *types.SuiMoveNormalizedModules, err error) {
+func (client *SuiClient) GetNormalizedMoveModulesByPackage(ctx context.Context, input types.GetNormalizedMoveModulesByPackageParams) (response *types.SuiMoveNormalizedModules, err error) {
 	return response, client.request(
+		ctx,
 		SuiTransportRequestOptions{
 			Method: "sui_getNormalizedMoveModulesByPackage",
 			Params: []any{utils.NormalizeSuiObjectId(input.Package)},
@@ -573,8 +606,9 @@ func (client *SuiClient) GetNormalizedMoveModulesByPackage(input types.GetNormal
 }
 
 // Get a structured representation of Move module
-func (client *SuiClient) GetNormalizedMoveModule(input types.GetNormalizedMoveModuleParams) (response *types.SuiMoveNormalizedModule, err error) {
+func (client *SuiClient) GetNormalizedMoveModule(ctx context.Context, input types.GetNormalizedMoveModuleParams) (response *types.SuiMoveNormalizedModule, err error) {
 	return response, client.request(
+		ctx,
 		SuiTransportRequestOptions{
 			Method: "sui_getNormalizedMoveModule",
 			Params: []any{utils.NormalizeSuiObjectId(input.Package), input.Module},
@@ -584,8 +618,9 @@ func (client *SuiClient) GetNormalizedMoveModule(input types.GetNormalizedMoveMo
 }
 
 // Get a structured representation of Move function
-func (client *SuiClient) GetNormalizedMoveFunction(input types.GetNormalizedMoveFunctionParams) (response *types.SuiMoveNormalizedFunction, err error) {
+func (client *SuiClient) GetNormalizedMoveFunction(ctx context.Context, input types.GetNormalizedMoveFunctionParams) (response *types.SuiMoveNormalizedFunction, err error) {
 	return response, client.request(
+		ctx,
 		SuiTransportRequestOptions{
 			Method: "sui_getNormalizedMoveFunction",
 			Params: []any{utils.NormalizeSuiObjectId(input.Package), input.Module, input.Function},
@@ -595,8 +630,9 @@ func (client *SuiClient) GetNormalizedMoveFunction(input types.GetNormalizedMove
 }
 
 // Get a structured representation of Move struct
-func (client *SuiClient) GetNormalizedMoveStruct(input types.GetNormalizedMoveStructParams) (response *types.SuiMoveNormalizedStruct, err error) {
+func (client *SuiClient) GetNormalizedMoveStruct(ctx context.Context, input types.GetNormalizedMoveStructParams) (response *types.SuiMoveNormalizedStruct, err error) {
 	return response, client.request(
+		ctx,
 		SuiTransportRequestOptions{
 			Method: "sui_getNormalizedMoveStruct",
 			Params: []any{utils.NormalizeSuiObjectId(input.Package), input.Module, input.Struct},
@@ -606,8 +642,9 @@ func (client *SuiClient) GetNormalizedMoveStruct(input types.GetNormalizedMoveSt
 }
 
 // Dry run a transaction block and return the result.
-func (client *SuiClient) DryRunTransactionBlock(input types.DryRunTransactionBlockParams) (response *types.DryRunTransactionBlockResponse, err error) {
+func (client *SuiClient) DryRunTransactionBlock(ctx context.Context, input types.DryRunTransactionBlockParams) (response *types.DryRunTransactionBlockResponse, err error) {
 	return response, client.request(
+		ctx,
 		SuiTransportRequestOptions{
 			Method: "sui_dryRunTransactionBlock",
 			Params: []any{b64.ToBase64(input.TransactionBlock)},
@@ -619,8 +656,9 @@ func (client *SuiClient) DryRunTransactionBlock(input types.DryRunTransactionBlo
 // Runs the transaction block in dev-inspect mode.
 // Which allows for nearly any transaction (or Move call) with any arguments.
 // Detailed results are provided, including both the transaction effects and any return values.
-func (client *SuiClient) DevInspectTransactionBlock(input types.DevInspectTransactionBlockParams) (response *types.DevInspectResults, err error) {
+func (client *SuiClient) DevInspectTransactionBlock(ctx context.Context, input types.DevInspectTransactionBlockParams) (response *types.DevInspectResults, err error) {
 	return response, client.request(
+		ctx,
 		SuiTransportRequestOptions{
 			Method: "sui_devInspectTransactionBlock",
 			Params: []any{input.Sender, input.TransactionBlock, input.GasPrice, input.Epoch},
@@ -629,8 +667,9 @@ func (client *SuiClient) DevInspectTransactionBlock(input types.DevInspectTransa
 	)
 }
 
-func (client *SuiClient) ExecuteTransactionBlock(input types.ExecuteTransactionBlockParams) (response *types.SuiTransactionBlockResponse, err error) {
+func (client *SuiClient) ExecuteTransactionBlock(ctx context.Context, input types.ExecuteTransactionBlockParams) (response *types.SuiTransactionBlockResponse, err error) {
 	return response, client.request(
+		ctx,
 		SuiTransportRequestOptions{
 			Method: "sui_executeTransactionBlock",
 			Params: []any{b64.ToBase64(input.TransactionBlock), input.Signature, input.Options, input.RequestType},
@@ -639,16 +678,19 @@ func (client *SuiClient) ExecuteTransactionBlock(input types.ExecuteTransactionB
 	)
 }
 
-func (client *SuiClient) SignAndExecuteTransactionBlock(input types.SignAndExecuteTransactionBlockParams) (response *types.SuiTransactionBlockResponse, err error) {
+func (client *SuiClient) SignAndExecuteTransactionBlock(ctx context.Context, input types.SignAndExecuteTransactionBlockParams) (response *types.SuiTransactionBlockResponse, err error) {
 	signatureData, err := input.Signer.SignTransactionBlock(input.TransactionBlock)
 	if err != nil {
 		return nil, err
 	}
 
-	return client.ExecuteTransactionBlock(types.ExecuteTransactionBlockParams{
-		TransactionBlock: input.TransactionBlock,
-		Signature:        []string{signatureData.Signature},
-		Options:          input.Options,
-		RequestType:      input.RequestType,
-	})
+	return client.ExecuteTransactionBlock(
+		ctx,
+		types.ExecuteTransactionBlockParams{
+			TransactionBlock: input.TransactionBlock,
+			Signature:        []string{signatureData.Signature},
+			Options:          input.Options,
+			RequestType:      input.RequestType,
+		},
+	)
 }
