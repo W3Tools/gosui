@@ -1,6 +1,7 @@
 package transactions
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/W3Tools/go-sui-sdk/v2/sui_types"
@@ -47,8 +48,8 @@ func (up *UnresolvedParameter) merge(dest *UnresolvedParameter) {
 	}
 }
 
-func (up *UnresolvedParameter) resolveAndPArseToArguments(suiClient *client.SuiClient, txb *Transaction) ([]sui_types.Argument, error) {
-	err := up.resolveObjects(suiClient)
+func (up *UnresolvedParameter) resolveAndPArseToArguments(ctx context.Context, suiClient *client.SuiClient, txb *Transaction) ([]sui_types.Argument, error) {
+	err := up.resolveObjects(ctx, suiClient)
 	if err != nil {
 		return nil, fmt.Errorf("can not resolve objects: %v", err)
 	}
@@ -56,7 +57,7 @@ func (up *UnresolvedParameter) resolveAndPArseToArguments(suiClient *client.SuiC
 	return up.toArguments(txb)
 }
 
-func (up *UnresolvedParameter) resolveObjects(suiClient *client.SuiClient) error {
+func (up *UnresolvedParameter) resolveObjects(ctx context.Context, suiClient *client.SuiClient) error {
 	var ids []string
 	for idx, resolve := range up.Objects {
 		if entry := cache.GetSharedObject(resolve.ObjectId); entry != nil {
@@ -68,7 +69,7 @@ func (up *UnresolvedParameter) resolveObjects(suiClient *client.SuiClient) error
 
 	if len(ids) > 0 {
 		var objects []*types.SuiObjectResponse
-		objects, err := suiClient.MultiGetObjects(types.MultiGetObjectsParams{IDs: ids, Options: &types.SuiObjectDataOptions{ShowOwner: true}})
+		objects, err := suiClient.MultiGetObjects(ctx, types.MultiGetObjectsParams{IDs: ids, Options: &types.SuiObjectDataOptions{ShowOwner: true}})
 		if err != nil {
 			return fmt.Errorf("can not call jsonrpc to multi get objects: %v", err)
 		}
