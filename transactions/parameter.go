@@ -48,7 +48,7 @@ func (up *UnresolvedParameter) merge(dest *UnresolvedParameter) {
 	}
 }
 
-func (up *UnresolvedParameter) resolveAndPArseToArguments(ctx context.Context, suiClient *client.SuiClient, txb *Transaction) ([]sui_types.Argument, error) {
+func (up *UnresolvedParameter) resolveAndParseToArguments(ctx context.Context, suiClient *client.SuiClient, txb *Transaction) ([]sui_types.Argument, error) {
 	err := up.resolveObjects(ctx, suiClient)
 	if err != nil {
 		return nil, fmt.Errorf("can not resolve objects: %v", err)
