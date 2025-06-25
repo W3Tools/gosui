@@ -12,6 +12,7 @@ import (
 	"github.com/W3Tools/go-sui-sdk/v2/sui_types"
 	"github.com/W3Tools/gosui/types"
 	"github.com/W3Tools/gosui/utils"
+	"github.com/fardream/go-bcs/bcs"
 )
 
 // Create Transaction Result With NormalizedMoveFunction Return Count
@@ -293,6 +294,57 @@ func (txb *Transaction) resolveMergeCoinsSources(sources []any) (*UnresolvedPara
 	return unresolvedParameter, nil
 }
 
+func (txb *Transaction) resolveMakeMoveVecType(vecType string) *move_types.TypeTag {
+	switch strings.ToLower(vecType) {
+	case "bool":
+		return &move_types.TypeTag{Bool: &lib.EmptyEnum{}}
+	case "u8":
+		return &move_types.TypeTag{U8: &lib.EmptyEnum{}}
+	case "u16":
+		return &move_types.TypeTag{U16: &lib.EmptyEnum{}}
+	case "u32":
+		return &move_types.TypeTag{U32: &lib.EmptyEnum{}}
+	case "u64":
+		return &move_types.TypeTag{U64: &lib.EmptyEnum{}}
+	case "u128":
+		return &move_types.TypeTag{U128: &lib.EmptyEnum{}}
+	case "u256":
+		return &move_types.TypeTag{U256: &lib.EmptyEnum{}}
+	case "address":
+		return &move_types.TypeTag{Address: &lib.EmptyEnum{}}
+	case "signer":
+		return &move_types.TypeTag{Signer: &lib.EmptyEnum{}}
+	default:
+		inner := strings.TrimPrefix(vecType, "vector<")
+		inner = strings.TrimSuffix(inner, ">")
+
+		if inner != vecType {
+			return &move_types.TypeTag{Vector: txb.resolveMakeMoveVecType(inner)}
+		}
+		return nil
+	}
+}
+
+func (txb *Transaction) resolveMakeMoveElement(eles []interface{}) (*UnresolvedParameter, error) {
+	unresolvedParameter := NewUnresolvedParameter(len(eles))
+
+	for idx, element := range eles {
+		reflectValue := reflect.ValueOf(element)
+		switch reflectValue.Type() {
+		case reflect.TypeOf((*sui_types.Argument)(nil)): // nest result
+			unresolvedParameter.Arguments[idx] = &UnresolvedArgument{Argument: reflectValue.Interface().(*sui_types.Argument)}
+		case reflect.TypeOf(uint(0)), reflect.TypeOf(uint8(0)), reflect.TypeOf(uint16(0)), reflect.TypeOf(uint32(0)), reflect.TypeOf(uint64(0)), reflect.TypeOf(&bcs.Uint128{}), reflect.TypeOf(&bcs.Uint256{}):
+			unresolvedParameter.Arguments[idx] = &UnresolvedArgument{Pure: element}
+		case reflect.TypeOf(""): // object id
+			unresolvedParameter.Objects[idx] = UnresolvedObject{Mutable: false, ObjectId: reflectValue.String()}
+		default:
+			return nil, fmt.Errorf("input amount should be uint or sui_types.Argument at index %d, got %v", idx, reflectValue.Type().String())
+		}
+	}
+
+	return unresolvedParameter, nil
+}
+
 // Resolve Function
 func (txb *Transaction) resolveMoveFunction(ctx context.Context, pkg, mod, fn string, arguments []interface{}, typeArguments []string) (inputArguments []sui_types.Argument, inputTypeArguments []move_types.TypeTag, returnsCount int, err error) {
 	normalized, err := getNormalizedMoveFunctionFromCache(ctx, txb.client, pkg, mod, fn)
@@ -318,7 +370,7 @@ func (txb *Transaction) resolveMoveFunction(ctx context.Context, pkg, mod, fn st
 		return nil, nil, 0, fmt.Errorf("can not resolve function arguments in command %d: %v", len(txb.builder.Commands), err)
 	}
 
-	inputArguments, err = unresolvedParameter.resolveAndPArseToArguments(ctx, txb.client, txb)
+	inputArguments, err = unresolvedParameter.resolveAndParseToArguments(ctx, txb.client, txb)
 	if err != nil {
 		return nil, nil, 0, fmt.Errorf("can not parse unresolved parameter to arguments in command %d: %v", len(txb.builder.Commands), err)
 	}

@@ -75,7 +75,7 @@ func (txb *Transaction) SplitCoins(ctx context.Context, coin interface{}, amount
 	}
 
 	unresolvedParameter.merge(amountArguments)
-	arguments, err := unresolvedParameter.resolveAndPArseToArguments(ctx, txb.client, txb)
+	arguments, err := unresolvedParameter.resolveAndParseToArguments(ctx, txb.client, txb)
 	if err != nil {
 		return nil, fmt.Errorf("can not resolve and parse to arguments in command %d, err: %v", len(txb.builder.Commands), err)
 	}
@@ -112,7 +112,7 @@ func (txb *Transaction) TransferObjects(ctx context.Context, objects []interface
 	}
 
 	unresolvedParameter.merge(unresolvedAddressArgument)
-	arguments, err := unresolvedParameter.resolveAndPArseToArguments(ctx, txb.client, txb)
+	arguments, err := unresolvedParameter.resolveAndParseToArguments(ctx, txb.client, txb)
 	if err != nil {
 		return fmt.Errorf("can not resolve and parse to arguments in command %d, err: %v", len(txb.builder.Commands), err)
 	}
@@ -149,7 +149,7 @@ func (txb *Transaction) MergeCoins(ctx context.Context, destination interface{},
 	}
 
 	unresolvedParameter.merge(unresolvedSourceParameter)
-	arguments, err := unresolvedParameter.resolveAndPArseToArguments(ctx, txb.client, txb)
+	arguments, err := unresolvedParameter.resolveAndParseToArguments(ctx, txb.client, txb)
 	if err != nil {
 		return fmt.Errorf("can not resolve and parse to arguments in command %d, err: %v", len(txb.builder.Commands), err)
 	}
@@ -167,6 +167,34 @@ func (txb *Transaction) MergeCoins(ctx context.Context, destination interface{},
 	)
 
 	return nil
+}
+
+// Make MoveVec
+func (txb *Transaction) MakeMoveVec(ctx context.Context, vecType string, arguments []interface{}) ([]*sui_types.Argument, error) {
+	typeTag := txb.resolveMakeMoveVecType(vecType)
+	unresolvedParameter, err := txb.resolveMakeMoveElement(arguments)
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve make move vec element in command %d, err: %v", len(txb.builder.Commands), err)
+	}
+
+	inputArguments, err := unresolvedParameter.resolveAndParseToArguments(ctx, txb.client, txb)
+	if err != nil {
+		return nil, fmt.Errorf("can not resolve and parse to arguments in command %d, err: %v", len(txb.builder.Commands), err)
+	}
+
+	txb.builder.Command(
+		sui_types.Command{
+			MakeMoveVec: &struct {
+				TypeTag   *move_types.TypeTag `bcs:"optional"`
+				Arguments []sui_types.Argument
+			}{
+				TypeTag:   typeTag,
+				Arguments: inputArguments,
+			},
+		},
+	)
+
+	return txb.createTransactionResult(1), nil
 }
 
 func (txb *Transaction) MoveCall(ctx context.Context, target string, arguments []interface{}, typeArguments []string) (returnArguments []*sui_types.Argument, err error) {
