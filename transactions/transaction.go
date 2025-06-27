@@ -17,7 +17,6 @@ import (
 type Transaction struct {
 	client  *client.SuiClient
 	builder *sui_types.ProgrammableTransactionBuilder
-	ctx     context.Context
 
 	Sender    *sui_types.SuiAddress `json:"sender"`
 	GasConfig *GasData              `json:"gasConfig"`
@@ -54,11 +53,6 @@ func (txb *Transaction) TransactionBuilder() *sui_types.ProgrammableTransactionB
 // Client returns the SuiClient associated with the transaction.
 func (txb *Transaction) Client() *client.SuiClient {
 	return txb.client
-}
-
-// Context returns the context associated with the transaction.
-func (txb *Transaction) Context() context.Context {
-	return txb.ctx
 }
 
 // Gas returns a TransactionInputGasCoin indicating a gas coin input.
