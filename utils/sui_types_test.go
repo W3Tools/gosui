@@ -45,7 +45,7 @@ func TestNormalizeSuiAddress(t *testing.T) {
 				t.Errorf("normalize sui address expected %s, but got %v", tt.expected, normalizedAddress)
 			}
 
-			normalizedObject := utils.NormalizeSuiObjectId(tt.str)
+			normalizedObject := utils.NormalizeSuiObjectID(tt.str)
 			if !reflect.DeepEqual(normalizedObject, tt.expected) {
 				t.Errorf("normalize sui object expected %s, but got %v", tt.expected, normalizedObject)
 			}
@@ -94,7 +94,7 @@ func TestNormalizeShortSuiAddress(t *testing.T) {
 				t.Errorf("normalize short sui address expected %s, but got %s", tt.expected, normalizedShortSuiAddress)
 			}
 
-			normalizedShortSuiObjectId := utils.NormalizeShortSuiObjectId(tt.str)
+			normalizedShortSuiObjectId := utils.NormalizeShortSuiObjectID(tt.str)
 			if !reflect.DeepEqual(normalizedShortSuiObjectId, tt.expected) {
 				t.Errorf("normalize short sui object id expected %s, but got %s", tt.expected, normalizedShortSuiObjectId)
 			}

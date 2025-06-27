@@ -5,11 +5,12 @@ import (
 	"errors"
 )
 
-// -----------SuiTransactionBlockKind-----------
+// SuiTransactionBlockKind is an interface for transaction block kinds in Sui.
 type SuiTransactionBlockKind interface {
 	isSuiTransactionBlockKind()
 }
 
+// SuiTransactionBlockKindChangeEpoch defines the ChangeEpoch kind for transaction block in Sui.
 type SuiTransactionBlockKindChangeEpoch struct {
 	ComputationCharge     string `json:"computation_charge"`
 	Epoch                 string `json:"epoch"`
@@ -19,11 +20,13 @@ type SuiTransactionBlockKindChangeEpoch struct {
 	StorageRebate         string `json:"storage_rebate"`
 }
 
+// SuiTransactionBlockKindGenesis defines the Genesis kind for transaction block in Sui.
 type SuiTransactionBlockKindGenesis struct {
 	Kind    string   `json:"kind"`
 	Objects []string `json:"objects"`
 }
 
+// SuiTransactionBlockKindConsensusCommitPrologue defines the ConsensusCommitPrologue kind for transaction block in Sui.
 type SuiTransactionBlockKindConsensusCommitPrologue struct {
 	CommitTimestampMs string `json:"commit_timestamp_ms"`
 	Epoch             string `json:"epoch"`
@@ -31,6 +34,7 @@ type SuiTransactionBlockKindConsensusCommitPrologue struct {
 	Round             string `json:"round"`
 }
 
+// SuiTransactionBlockKindConsensusCommitPrologueV3 defines the ConsensusCommitPrologueV3 kind for transaction block in Sui.
 type SuiTransactionBlockKindConsensusCommitPrologueV3 struct {
 	Kind                                  string                                `json:"kind"`
 	Epoch                                 string                                `json:"epoch"`
@@ -41,16 +45,19 @@ type SuiTransactionBlockKindConsensusCommitPrologueV3 struct {
 	ConsensusDeterminedVersionAssignments ConsensusDeterminedVersionAssignments `json:"consensus_determined_version_assignments"`
 }
 
+// ConsensusDeterminedVersionAssignments defines the version assignments determined by consensus in Sui.
 type ConsensusDeterminedVersionAssignments struct {
 	CancelledTransactions []interface{} `json:"CancelledTransactions"`
 }
 
+// SuiTransactionBlockKindProgrammableTransaction defines the ProgrammableTransaction kind for transaction block in Sui.
 type SuiTransactionBlockKindProgrammableTransaction struct {
 	Kind         string                  `json:"kind"`
 	Inputs       []SuiCallArgWrapper     `json:"inputs"`
 	Transactions []SuiTransactionWrapper `json:"transactions"`
 }
 
+// SuiTransactionBlockKindAuthenticatorStateUpdate defines the AuthenticatorStateUpdate kind for transaction block in Sui.
 type SuiTransactionBlockKindAuthenticatorStateUpdate struct {
 	Epoch         string         `json:"epoch"`
 	Kind          string         `json:"kind"`
@@ -58,6 +65,7 @@ type SuiTransactionBlockKindAuthenticatorStateUpdate struct {
 	Round         string         `json:"round"`
 }
 
+// SuiTransactionBlockKindEndOfEpochTransaction defines the EndOfEpochTransaction kind for transaction block in Sui.
 type SuiTransactionBlockKindEndOfEpochTransaction struct {
 	Kind         string                                `json:"kind"`
 	Transactions []SuiEndOfEpochTransactionKindWrapper `json:"Transactions"`
@@ -71,10 +79,12 @@ func (SuiTransactionBlockKindProgrammableTransaction) isSuiTransactionBlockKind(
 func (SuiTransactionBlockKindAuthenticatorStateUpdate) isSuiTransactionBlockKind()  {}
 func (SuiTransactionBlockKindEndOfEpochTransaction) isSuiTransactionBlockKind()     {}
 
+// SuiTransactionBlockKindWrapper defines a wrapper for SuiTransactionBlockKind.
 type SuiTransactionBlockKindWrapper struct {
 	SuiTransactionBlockKind
 }
 
+// UnmarshalJSON decodes a SuiTransactionBlockKindWrapper from JSON.
 func (w *SuiTransactionBlockKindWrapper) UnmarshalJSON(data []byte) error {
 	type Kind struct {
 		Kind string `json:"kind"`
@@ -135,6 +145,7 @@ func (w *SuiTransactionBlockKindWrapper) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON encodes a SuiTransactionBlockKindWrapper to JSON.
 func (w SuiTransactionBlockKindWrapper) MarshalJSON() ([]byte, error) {
 	switch t := w.SuiTransactionBlockKind.(type) {
 	case SuiTransactionBlockKindChangeEpoch:
@@ -191,35 +202,42 @@ func (w SuiTransactionBlockKindWrapper) MarshalJSON() ([]byte, error) {
 	}
 }
 
-// -----------Sui Transaction-----------
+// SuiTransaction is an interface for transactions in Sui.
 type SuiTransaction interface {
 	isSuiTransaction()
 }
 
+// SuiTransactionMoveCall defines a MoveCall transaction in Sui.
 type SuiTransactionMoveCall struct {
 	MoveCall MoveCallSuiTransaction `json:"MoveCall"`
 }
 
+// SuiTransactionTransferObjects defines a TransferObjects transaction in Sui.
 type SuiTransactionTransferObjects struct {
 	TransferObjects [2]SuiTransactionArgumentWrapper `json:"TransferObjects"`
 }
 
+// SuiTransactionSplitCoins defines a SplitCoins transaction in Sui.
 type SuiTransactionSplitCoins struct {
 	SplitCoins [2]SuiTransactionArgumentWrapper `json:"SplitCoins"`
 }
 
+// SuiTransactionMergeCoins defines a MergeCoins transaction in Sui.
 type SuiTransactionMergeCoins struct {
 	MergeCoins [2]SuiTransactionArgumentWrapper `json:"MergeCoins"`
 }
 
+// SuiTransactionPublish defines a Publish transaction in Sui.
 type SuiTransactionPublish struct {
 	Publish []string `json:"Publish"`
 }
 
+// SuiTransactionUpgrade defines an Upgrade transaction in Sui.
 type SuiTransactionUpgrade struct {
 	Upgrade [3]SuiTransactionArgumentWrapper `json:"Upgrade"`
 }
 
+// SuiTransactionMakeMoveVec defines a MakeMoveVec transaction in Sui.
 type SuiTransactionMakeMoveVec struct {
 	MakeMoveVec [2]*SuiTransactionArgumentWrapper `json:"MakeMoveVec"`
 }
@@ -232,10 +250,12 @@ func (SuiTransactionPublish) isSuiTransaction()         {}
 func (SuiTransactionUpgrade) isSuiTransaction()         {}
 func (SuiTransactionMakeMoveVec) isSuiTransaction()     {}
 
+// SuiTransactionWrapper defines a wrapper for SuiTransaction.
 type SuiTransactionWrapper struct {
 	SuiTransaction
 }
 
+// UnmarshalJSON decodes a SuiTransactionWrapper from JSON.
 func (w *SuiTransactionWrapper) UnmarshalJSON(data []byte) error {
 	var obj map[string]json.RawMessage
 	if err := json.Unmarshal(data, &obj); err != nil {
@@ -308,6 +328,7 @@ func (w *SuiTransactionWrapper) UnmarshalJSON(data []byte) error {
 	return errors.New("unknown SuiTransaction type")
 }
 
+// MarshalJSON encodes a SuiTransactionWrapper to JSON.
 func (w *SuiTransactionWrapper) MarshalJSON() ([]byte, error) {
 	switch t := w.SuiTransaction.(type) {
 	case SuiTransactionMoveCall:
@@ -329,16 +350,20 @@ func (w *SuiTransactionWrapper) MarshalJSON() ([]byte, error) {
 	}
 }
 
-// -----------SuiEndOfEpochTransactionKind-----------
+// SuiEndOfEpochTransactionKind is an interface for end-of-epoch transaction kinds in Sui.
 type SuiEndOfEpochTransactionKind interface {
 	isSuiEndOfEpochTransactionKind()
 }
+
+// SuiEndOfEpochTransactionKindAuthenticatorStateCreate defines the AuthenticatorStateCreate kind for end-of-epoch transaction in Sui.
 type SuiEndOfEpochTransactionKindAuthenticatorStateCreate string
 
+// SuiEndOfEpochTransactionKindChangeEpoch defines the ChangeEpoch kind for end-of-epoch transaction in Sui.
 type SuiEndOfEpochTransactionKindChangeEpoch struct {
 	ChangeEpoch SuiChangeEpoch `json:"ChangeEpoch"`
 }
 
+// SuiEndOfEpochTransactionKindAuthenticatorStateExpire defines the AuthenticatorStateExpire kind for end-of-epoch transaction in Sui.
 type SuiEndOfEpochTransactionKindAuthenticatorStateExpire struct {
 	AuthenticatorStateExpire SuiAuthenticatorStateExpire `json:"AuthenticatorStateExpire"`
 }
@@ -347,10 +372,12 @@ func (SuiEndOfEpochTransactionKindAuthenticatorStateCreate) isSuiEndOfEpochTrans
 func (SuiEndOfEpochTransactionKindChangeEpoch) isSuiEndOfEpochTransactionKind()              {}
 func (SuiEndOfEpochTransactionKindAuthenticatorStateExpire) isSuiEndOfEpochTransactionKind() {}
 
+// SuiEndOfEpochTransactionKindWrapper defines a wrapper for SuiEndOfEpochTransactionKind.
 type SuiEndOfEpochTransactionKindWrapper struct {
 	SuiEndOfEpochTransactionKind
 }
 
+// UnmarshalJSON decodes a SuiEndOfEpochTransactionKindWrapper from JSON.
 func (w *SuiEndOfEpochTransactionKindWrapper) UnmarshalJSON(data []byte) error {
 	var s string
 	if err := json.Unmarshal(data, &s); err == nil {
@@ -382,6 +409,7 @@ func (w *SuiEndOfEpochTransactionKindWrapper) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON encodes a SuiEndOfEpochTransactionKindWrapper to JSON.
 func (w *SuiEndOfEpochTransactionKindWrapper) MarshalJSON() ([]byte, error) {
 	switch t := w.SuiEndOfEpochTransactionKind.(type) {
 	case SuiEndOfEpochTransactionKindAuthenticatorStateCreate:
@@ -395,21 +423,25 @@ func (w *SuiEndOfEpochTransactionKindWrapper) MarshalJSON() ([]byte, error) {
 	}
 }
 
-// -----------SuiArgument-----------
+// SuiArgument is an interface for transaction arguments in Sui.
 type SuiArgument interface {
 	isSuiArgument()
 }
 
+// SuiArgumentGasCoin defines a gas coin argument in Sui.
 type SuiArgumentGasCoin string
 
+// SuiArgumentInput defines an input argument in Sui.
 type SuiArgumentInput struct {
 	Input uint64 `json:"Input"`
 }
 
+// SuiArgumentResult defines a result argument in Sui.
 type SuiArgumentResult struct {
 	Result uint64 `json:"Result"`
 }
 
+// SuiArgumentNestedResult defines a nested result argument in Sui.
 type SuiArgumentNestedResult struct {
 	NestedResult [2]uint64 `json:"NestedResult"`
 }
@@ -419,10 +451,12 @@ func (SuiArgumentInput) isSuiArgument()        {}
 func (SuiArgumentResult) isSuiArgument()       {}
 func (SuiArgumentNestedResult) isSuiArgument() {}
 
+// SuiArgumentWrapper defines a wrapper for SuiArgument.
 type SuiArgumentWrapper struct {
 	SuiArgument
 }
 
+// UnmarshalJSON decodes a SuiArgumentWrapper from JSON.
 func (w *SuiArgumentWrapper) UnmarshalJSON(data []byte) error {
 	var s string
 	if err := json.Unmarshal(data, &s); err == nil {
@@ -465,6 +499,7 @@ func (w *SuiArgumentWrapper) UnmarshalJSON(data []byte) error {
 	return errors.New("unknown SuiArgument type")
 }
 
+// MarshalJSON encodes a SuiArgumentWrapper to JSON.
 func (w SuiArgumentWrapper) MarshalJSON() ([]byte, error) {
 	switch arg := w.SuiArgument.(type) {
 	case SuiArgumentGasCoin:
@@ -480,14 +515,21 @@ func (w SuiArgumentWrapper) MarshalJSON() ([]byte, error) {
 	}
 }
 
-// -----------SuiTransactionArgument-----------
+// SuiTransactionArgument is an interface for transaction arguments in Sui.
 type SuiTransactionArgument interface {
 	isSuiTransactionArgument()
 }
 
+// SuiTransactionArgumentOne defines a single transaction argument in Sui.
 type SuiTransactionArgumentOne SuiArgumentWrapper
+
+// SuiTransactionArgumentArray defines an array of transaction arguments in Sui.
 type SuiTransactionArgumentArray []SuiArgumentWrapper
+
+// SuiTransactionArgumentString defines a string transaction argument in Sui.
 type SuiTransactionArgumentString string
+
+// SuiTransactionArgumentStringArray defines an array of string transaction arguments in Sui.
 type SuiTransactionArgumentStringArray []string
 
 func (SuiTransactionArgumentOne) isSuiTransactionArgument()         {}
@@ -495,10 +537,12 @@ func (SuiTransactionArgumentArray) isSuiTransactionArgument()       {}
 func (SuiTransactionArgumentString) isSuiTransactionArgument()      {}
 func (SuiTransactionArgumentStringArray) isSuiTransactionArgument() {}
 
+// SuiTransactionArgumentWrapper defines a wrapper for SuiTransactionArgument.
 type SuiTransactionArgumentWrapper struct {
 	SuiTransactionArgument
 }
 
+// UnmarshalJSON decodes a SuiTransactionArgumentWrapper from JSON.
 func (w *SuiTransactionArgumentWrapper) UnmarshalJSON(data []byte) error {
 	var one SuiArgumentWrapper
 	if err := json.Unmarshal(data, &one); err == nil {
@@ -527,6 +571,7 @@ func (w *SuiTransactionArgumentWrapper) UnmarshalJSON(data []byte) error {
 	return errors.New("unknown SuiTransactionArgument type")
 }
 
+// MarshalJSON encodes a SuiTransactionArgumentWrapper to JSON.
 func (w SuiTransactionArgumentWrapper) MarshalJSON() ([]byte, error) {
 	switch arg := w.SuiTransactionArgument.(type) {
 	case SuiTransactionArgumentOne:

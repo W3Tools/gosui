@@ -5,35 +5,42 @@ import (
 	"errors"
 )
 
+// ObjectRead is an interface that represents different types of object read results.
 type ObjectRead interface {
 	isObjectRead()
 }
 
+// ObjectReadVersionFound defines a structure for a successful object read with version found.
 type ObjectReadVersionFound struct {
 	Details SuiObjectData `json:"detail"`
 	Status  string        `json:"status"`
 }
 
+// ObjectReadObjectNotExists defines a structure for an object read where the object does not exist.
 type ObjectReadObjectNotExists struct {
 	Details string `json:"detail"`
 	Status  string `json:"status"`
 }
 
+// ObjectReadObjectDeleted defines a structure for an object read where the object has been deleted.
 type ObjectReadObjectDeleted struct {
 	Details SuiObjectRef `json:"detail"`
 	Status  string       `json:"status"`
 }
 
+// ObjectReadVersionNotFound defines a structure for an object read where the requested version was not found.
 type ObjectReadVersionNotFound struct {
 	Details [2]string `json:"detail"`
 	Status  string    `json:"status"`
 }
 
+// ObjectReadVersionTooHigh defines a structure for an object read where the requested version is too high.
 type ObjectReadVersionTooHigh struct {
 	Details VersionTooHighDetails `json:"detail"`
 	Status  string                `json:"status"`
 }
 
+// VersionTooHighDetails defines the details for a version too high error.
 type VersionTooHighDetails struct {
 	AskedVersion  string `json:"asked_version"`
 	LatestVersion string `json:"latest_version"`
@@ -46,10 +53,12 @@ func (ObjectReadObjectDeleted) isObjectRead()   {}
 func (ObjectReadVersionNotFound) isObjectRead() {}
 func (ObjectReadVersionTooHigh) isObjectRead()  {}
 
+// ObjectReadWrapper is a wrapper for ObjectRead that allows unmarshalling from JSON.
 type ObjectReadWrapper struct {
 	ObjectRead
 }
 
+// UnmarshalJSON custom unmarshaller for ObjectReadWrapper
 func (w *ObjectReadWrapper) UnmarshalJSON(data []byte) error {
 	type Status struct {
 		Status string `json:"status"`
@@ -98,6 +107,7 @@ func (w *ObjectReadWrapper) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON custom marshaller for ObjectReadWrapper
 func (w ObjectReadWrapper) MarshalJSON() ([]byte, error) {
 	switch obj := w.ObjectRead.(type) {
 	case ObjectReadVersionFound:

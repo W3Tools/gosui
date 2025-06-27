@@ -1,21 +1,30 @@
 package types
 
+// ProtocolConfigValue is an interface that defines a protocol config value type.
 type ProtocolConfigValue interface {
 	isProtocolConfigValue()
 }
 
-type ProtocolConfigValue_u32 struct {
+// ProtocolConfigValueU32 defines a protocol config value of type U32.
+type ProtocolConfigValueU32 struct {
 	U32 string `json:"u32"`
 }
 
-type ProtocolConfigValue_u64 struct {
+// ProtocolConfigValueU64 defines a protocol config value of type U64.
+type ProtocolConfigValueU64 struct {
 	U64 string `json:"u64"`
 }
 
-type ProtocolConfigValue_f64 struct {
+// ProtocolConfigValueF64 defines a protocol config value of type F64.
+type ProtocolConfigValueF64 struct {
 	F64 string `json:"f64"`
 }
 
-func (ProtocolConfigValue_u32) isProtocolConfigValue() {}
-func (ProtocolConfigValue_u64) isProtocolConfigValue() {}
-func (ProtocolConfigValue_f64) isProtocolConfigValue() {}
+// isProtocolConfigValue implements the ProtocolConfigValue interface for ProtocolConfigValueU32.
+func (ProtocolConfigValueU32) isProtocolConfigValue() {}
+
+// isProtocolConfigValue implements the ProtocolConfigValue interface for ProtocolConfigValueU64.
+func (ProtocolConfigValueU64) isProtocolConfigValue() {}
+
+// isProtocolConfigValue implements the ProtocolConfigValue interface for ProtocolConfigValueF64.
+func (ProtocolConfigValueF64) isProtocolConfigValue() {}

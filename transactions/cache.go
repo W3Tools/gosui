@@ -10,17 +10,20 @@ import (
 	"github.com/W3Tools/gosui/utils"
 )
 
+// cache defines a global instance of Cache for Move functions and shared or immutable objects.
 var cache = &Cache{
 	MoveFunction:            make(map[string]*MoveFunctionCacheEntry),
 	SharedOrImmutableObject: make(map[string]*SharedObjectCacheEntry),
 }
 
+// Cache defines a cache for Move functions and shared or immutable objects.
 type Cache struct {
 	mutex                   sync.RWMutex
 	MoveFunction            map[string]*MoveFunctionCacheEntry
 	SharedOrImmutableObject map[string]*SharedObjectCacheEntry
 }
 
+// MoveFunctionCacheEntry defines a cache entry for a Move function.
 type MoveFunctionCacheEntry struct {
 	Package    string
 	Module     string
@@ -28,18 +31,20 @@ type MoveFunctionCacheEntry struct {
 	Normalized *types.SuiMoveNormalizedFunction
 }
 
+// SharedObjectCacheEntry defines a cache entry for a shared or immutable object.
 type SharedObjectCacheEntry struct {
-	ObjectId             *sui_types.ObjectID
+	ObjectID             *sui_types.ObjectID
 	InitialSharedVersion *uint64
 }
 
-// Cache: Move Function
+// GetMoveFunctionDefinition retrieves a cached Move function definition by package, module, and function name.
 func (c *Cache) GetMoveFunctionDefinition(pkg, mod, fn string) *MoveFunctionCacheEntry {
 	name := fmt.Sprintf("%s::%s::%s", utils.NormalizeSuiAddress(pkg), mod, fn)
 
 	return c.MoveFunction[name]
 }
 
+// AddMoveFunctionDefinition adds a Move function definition to the cache.
 func (c *Cache) AddMoveFunctionDefinition(entry *MoveFunctionCacheEntry) {
 	name := fmt.Sprintf("%s::%s::%s", utils.NormalizeSuiAddress(entry.Package), entry.Module, entry.Function)
 
@@ -49,6 +54,7 @@ func (c *Cache) AddMoveFunctionDefinition(entry *MoveFunctionCacheEntry) {
 	c.MoveFunction[name] = entry
 }
 
+// DeleteMoveFunctionDefinition removes a Move function definition from the cache by package, module, and function name.
 func (c *Cache) DeleteMoveFunctionDefinition(pkg, mod, fn string) {
 	name := fmt.Sprintf("%s::%s::%s", utils.NormalizeSuiAddress(pkg), mod, fn)
 
@@ -58,11 +64,12 @@ func (c *Cache) DeleteMoveFunctionDefinition(pkg, mod, fn string) {
 	delete(c.MoveFunction, name)
 }
 
-// Cache: Shared Object
+// GetSharedObject retrieves a shared or immutable object from the cache by its ID.
 func (c *Cache) GetSharedObject(id string) *SharedObjectCacheEntry {
 	return c.SharedOrImmutableObject[id]
 }
 
+// GetSharedObjects retrieves multiple shared or immutable objects from the cache by their IDs.
 func (c *Cache) GetSharedObjects(ids []string) []*SharedObjectCacheEntry {
 	entries := make([]*SharedObjectCacheEntry, 0)
 
@@ -73,22 +80,25 @@ func (c *Cache) GetSharedObjects(ids []string) []*SharedObjectCacheEntry {
 	return entries
 }
 
+// AddSharedObject adds a shared or immutable object to the cache.
 func (c *Cache) AddSharedObject(entry *SharedObjectCacheEntry) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
-	c.SharedOrImmutableObject[entry.ObjectId.String()] = entry
+	c.SharedOrImmutableObject[entry.ObjectID.String()] = entry
 }
 
+// AddSharedObjects adds multiple shared or immutable objects to the cache.
 func (c *Cache) AddSharedObjects(entries []*SharedObjectCacheEntry) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
 	for _, entry := range entries {
-		c.SharedOrImmutableObject[entry.ObjectId.String()] = entry
+		c.SharedOrImmutableObject[entry.ObjectID.String()] = entry
 	}
 }
 
+// DeleteSharedObject removes a shared or immutable object from the cache by its ID.
 func (c *Cache) DeleteSharedObject(id string) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
@@ -96,6 +106,7 @@ func (c *Cache) DeleteSharedObject(id string) {
 	delete(c.SharedOrImmutableObject, id)
 }
 
+// DeleteSharedObjects removes multiple shared or immutable objects from the cache by their IDs.
 func (c *Cache) DeleteSharedObjects(ids []string) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
@@ -105,7 +116,7 @@ func (c *Cache) DeleteSharedObjects(ids []string) {
 	}
 }
 
-// Convert SharedObjectCacheEntry to sui_types.ObjectArg
+// ToObjectArg encodes a SharedObjectCacheEntry as a Sui ObjectArg.
 func (entry *SharedObjectCacheEntry) ToObjectArg(mutable bool) *sui_types.ObjectArg {
 	objectArg := new(sui_types.ObjectArg)
 
@@ -114,7 +125,7 @@ func (entry *SharedObjectCacheEntry) ToObjectArg(mutable bool) *sui_types.Object
 		InitialSharedVersion uint64
 		Mutable              bool
 	}{
-		Id:                   *entry.ObjectId,
+		Id:                   *entry.ObjectID,
 		InitialSharedVersion: *entry.InitialSharedVersion,
 		Mutable:              mutable,
 	}

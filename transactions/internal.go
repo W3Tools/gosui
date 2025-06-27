@@ -60,7 +60,7 @@ func setGasBudget(ctx context.Context, txb *Transaction) error {
 			return fmt.Errorf("dry run failed, could not automatically determine a budget: %v", dryRunResult.Effects.Status.Error)
 		}
 
-		safeOverhead := utils.GAS_SAFE_OVERHEAD * tx.GasConfig.Price
+		safeOverhead := utils.GasSafeOverhead * tx.GasConfig.Price
 
 		computationCost, err := strconv.ParseUint(dryRunResult.Effects.GasUsed.ComputationCost, 10, 64)
 		if err != nil {
@@ -99,7 +99,7 @@ func setGasPayment(ctx context.Context, txb *Transaction) error {
 		if owner == "" {
 			owner = txb.Sender.String()
 		}
-		coins, err := txb.client.GetCoins(ctx, types.GetCoinsParams{Owner: owner, CoinType: &utils.SUI_TYPE_ARG})
+		coins, err := txb.client.GetCoins(ctx, types.GetCoinsParams{Owner: owner, CoinType: &utils.SuiTypeArg})
 		if err != nil {
 			return fmt.Errorf("failed to get coins, err: %v", err)
 		}
@@ -135,8 +135,8 @@ func isTxContext(param types.SuiMoveNormalizedType) bool {
 }
 
 // Extract NormalizedMoveFunction Type
-func extractStructTag(normalizedType types.SuiMoveNormalizedType) *types.SuiMoveNormalizedType_Struct {
-	_struct, ok := normalizedType.(types.SuiMoveNormalizedType_Struct)
+func extractStructTag(normalizedType types.SuiMoveNormalizedType) *types.SuiMoveNormalizedTypeStruct {
+	_struct, ok := normalizedType.(types.SuiMoveNormalizedTypeStruct)
 	if ok {
 		return &_struct
 	}
@@ -156,7 +156,7 @@ func extractStructTag(normalizedType types.SuiMoveNormalizedType) *types.SuiMove
 }
 
 func extractReference(normalizedType types.SuiMoveNormalizedType) types.SuiMoveNormalizedType {
-	reference, ok := normalizedType.(types.SuiMoveNormalizedType_Reference)
+	reference, ok := normalizedType.(types.SuiMoveNormalizedTypeReference)
 	if ok {
 		return reference.Reference.SuiMoveNormalizedType
 	}
@@ -164,7 +164,7 @@ func extractReference(normalizedType types.SuiMoveNormalizedType) types.SuiMoveN
 }
 
 func extractMutableReference(normalizedType types.SuiMoveNormalizedType) types.SuiMoveNormalizedType {
-	mutableReference, ok := normalizedType.(types.SuiMoveNormalizedType_MutableReference)
+	mutableReference, ok := normalizedType.(types.SuiMoveNormalizedTypeMutableReference)
 	if ok {
 		return mutableReference.MutableReference.SuiMoveNormalizedType
 	}
@@ -184,7 +184,7 @@ func (txb *Transaction) resolveSplitCoinsCoin(coin any) (*UnresolvedParameter, e
 	case reflect.TypeOf((*TransactionInputGasCoin)(nil)): // gas coin
 		unresolvedParameter.Arguments[0] = &UnresolvedArgument{Argument: &sui_types.Argument{GasCoin: &lib.EmptyEnum{}}}
 	case reflect.TypeOf(""): // object id
-		unresolvedParameter.Objects[0] = UnresolvedObject{Mutable: false, ObjectId: reflectValue.String()}
+		unresolvedParameter.Objects[0] = UnresolvedObject{Mutable: false, ObjectID: reflectValue.String()}
 	default:
 		return nil, fmt.Errorf("input coin should one of address(string), sui_types.Argument or *TransactionInputGasCoin, got %v", reflectValue.Type().String())
 	}
@@ -225,7 +225,7 @@ func (txb *Transaction) resolveTransferObjectsObjects(objects []any) (*Unresolve
 		case reflect.TypeOf((*TransactionInputGasCoin)(nil)): // gas coin
 			unresolvedParameter.Arguments[idx] = &UnresolvedArgument{Argument: &sui_types.Argument{GasCoin: &lib.EmptyEnum{}}}
 		case reflect.TypeOf(""): // object id
-			unresolvedParameter.Objects[idx] = UnresolvedObject{Mutable: false, ObjectId: reflectValue.String()}
+			unresolvedParameter.Objects[idx] = UnresolvedObject{Mutable: false, ObjectID: reflectValue.String()}
 		default:
 			return nil, fmt.Errorf("input object should one of address(string), sui_types.Argument or *TransactionInputGasCoin at index %d, got %v", idx, reflectValue.Type().String())
 		}
@@ -267,7 +267,7 @@ func (txb *Transaction) resolveMergeCoinsDestination(destination any) (*Unresolv
 	case reflect.TypeOf((*sui_types.Argument)(nil)): // nest result
 		unresolvedParameter.Arguments[0] = &UnresolvedArgument{Argument: reflectValue.Interface().(*sui_types.Argument)}
 	case reflect.TypeOf(""): // address
-		unresolvedParameter.Objects[0] = UnresolvedObject{Mutable: false, ObjectId: reflectValue.String()}
+		unresolvedParameter.Objects[0] = UnresolvedObject{Mutable: false, ObjectID: reflectValue.String()}
 	default:
 		return nil, fmt.Errorf("input destination should be address(string) or sui_types.Argument, got %v", reflectValue.Type().String())
 	}
@@ -285,7 +285,7 @@ func (txb *Transaction) resolveMergeCoinsSources(sources []any) (*UnresolvedPara
 		case reflect.TypeOf((*sui_types.Argument)(nil)): // nest result
 			unresolvedParameter.Arguments[idx] = &UnresolvedArgument{Argument: reflectValue.Interface().(*sui_types.Argument)}
 		case reflect.TypeOf(""): // object id
-			unresolvedParameter.Objects[idx] = UnresolvedObject{Mutable: false, ObjectId: reflectValue.String()}
+			unresolvedParameter.Objects[idx] = UnresolvedObject{Mutable: false, ObjectID: reflectValue.String()}
 		default:
 			return nil, fmt.Errorf("input source should be address(string) or sui_types.Argument at index %d, got %v", idx, reflectValue.Type().String())
 		}
@@ -336,7 +336,7 @@ func (txb *Transaction) resolveMakeMoveElement(eles []interface{}) (*UnresolvedP
 		case reflect.TypeOf(uint(0)), reflect.TypeOf(uint8(0)), reflect.TypeOf(uint16(0)), reflect.TypeOf(uint32(0)), reflect.TypeOf(uint64(0)), reflect.TypeOf(&bcs.Uint128{}), reflect.TypeOf(&bcs.Uint256{}):
 			unresolvedParameter.Arguments[idx] = &UnresolvedArgument{Pure: element}
 		case reflect.TypeOf(""): // object id
-			unresolvedParameter.Objects[idx] = UnresolvedObject{Mutable: false, ObjectId: reflectValue.String()}
+			unresolvedParameter.Objects[idx] = UnresolvedObject{Mutable: false, ObjectID: reflectValue.String()}
 		default:
 			return nil, fmt.Errorf("input amount should be uint or sui_types.Argument at index %d, got %v", idx, reflectValue.Type().String())
 		}
@@ -389,9 +389,9 @@ func (txb *Transaction) resolveFunctionArguments(inputArguments []interface{}, r
 		reflectParameter := reflect.ValueOf(parameter.SuiMoveNormalizedType)
 
 		switch reflectParameter.Type() {
-		case reflect.TypeOf(types.SuiMoveNormalizedType_Vector{}):
+		case reflect.TypeOf(types.SuiMoveNormalizedTypeVector{}):
 			unresolvedParameter.Arguments[idx] = &UnresolvedArgument{Pure: inputArguments[idx]}
-		case reflect.TypeOf(types.SuiMoveNormalizedType_String("")):
+		case reflect.TypeOf(types.SuiMoveNormalizedTypeString("")):
 			// Here we are only supporting pure types
 			switch reflectParameter.String() {
 			case "Bool", "U8", "U16", "U32", "U64", "U128", "U256":
@@ -413,12 +413,12 @@ func (txb *Transaction) resolveFunctionArguments(inputArguments []interface{}, r
 				return nil, fmt.Errorf("input parameter must be address(string) at index %d, got %v", idx, reflecetInput.Type())
 			}
 			switch reflectParameter.Type() {
-			case reflect.TypeOf(types.SuiMoveNormalizedType_Reference{}):
-				unresolvedParameter.Objects[idx] = UnresolvedObject{Mutable: false, ObjectId: inputArguments[idx].(string)}
-			case reflect.TypeOf(types.SuiMoveNormalizedType_MutableReference{}):
-				unresolvedParameter.Objects[idx] = UnresolvedObject{Mutable: true, ObjectId: inputArguments[idx].(string)}
-			case reflect.TypeOf(types.SuiMoveNormalizedType_Struct{}):
-				unresolvedParameter.Objects[idx] = UnresolvedObject{Mutable: false, ObjectId: inputArguments[idx].(string)}
+			case reflect.TypeOf(types.SuiMoveNormalizedTypeReference{}):
+				unresolvedParameter.Objects[idx] = UnresolvedObject{Mutable: false, ObjectID: inputArguments[idx].(string)}
+			case reflect.TypeOf(types.SuiMoveNormalizedTypeMutableReference{}):
+				unresolvedParameter.Objects[idx] = UnresolvedObject{Mutable: true, ObjectID: inputArguments[idx].(string)}
+			case reflect.TypeOf(types.SuiMoveNormalizedTypeStruct{}):
+				unresolvedParameter.Objects[idx] = UnresolvedObject{Mutable: false, ObjectID: inputArguments[idx].(string)}
 			default:
 				return nil, fmt.Errorf("function parameter [%v] is not supported at index %d", reflectParameter.Type(), idx)
 			}
@@ -461,14 +461,14 @@ func objectResponseToObjectArg(data *types.SuiObjectResponse, mutable bool) (*su
 
 	objectArg := new(sui_types.ObjectArg)
 
-	id, err := sui_types.NewObjectIdFromHex(data.Data.ObjectId)
+	id, err := sui_types.NewObjectIdFromHex(data.Data.ObjectID)
 	if err != nil {
-		return nil, fmt.Errorf("object id [%s] must be sui address: %v", data.Data.ObjectId, err)
+		return nil, fmt.Errorf("object id [%s] must be sui address: %v", data.Data.ObjectID, err)
 	}
 
 	owner := data.Data.Owner.ObjectOwner
 	switch owner := owner.(type) {
-	case types.ObjectOwner_Shared:
+	case types.ObjectOwnerShared:
 		// Shared object: just set the initial shared version
 		objectArg.SharedObject = &struct {
 			Id                   move_types.AccountAddress
@@ -481,7 +481,7 @@ func objectResponseToObjectArg(data *types.SuiObjectResponse, mutable bool) (*su
 		}
 	default:
 		// Other object: set the version and digest
-		objectRef, err := ObjectStringRef{ObjectId: data.Data.ObjectId, Version: data.Data.Version, Digest: data.Data.Digest}.ToObjectRef()
+		objectRef, err := ObjectStringRef{ObjectID: data.Data.ObjectID, Version: data.Data.Version, Digest: data.Data.Digest}.ToObjectRef()
 		if err != nil {
 			return nil, fmt.Errorf("can not convert object ref: %v", err)
 		}

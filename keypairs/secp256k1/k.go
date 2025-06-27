@@ -9,7 +9,7 @@ import (
 	"github.com/btcsuite/btcd/btcec/v2"
 )
 
-// DeterministicSign generates deterministic ECDSA signature using RFC 6979 for secp256k1 curve
+// deterministicSign generates a deterministic ECDSA signature using RFC 6979 for the secp256k1 curve.
 func deterministicSign(priv *btcec.PrivateKey, hash []byte) (*big.Int, *big.Int, error) {
 	curve := btcec.S256()
 	k := deterministicK(priv, hash)
@@ -27,7 +27,7 @@ func deterministicSign(priv *btcec.PrivateKey, hash []byte) (*big.Int, *big.Int,
 	return r, s, nil
 }
 
-// RFC 6979 deterministic K generation for secp256k1
+// deterministicK generates a deterministic K value according to RFC 6979 for the secp256k1 curve.
 func deterministicK(priv *btcec.PrivateKey, hash []byte) *big.Int {
 	curve := btcec.S256()
 	q := curve.Params().N
@@ -79,6 +79,7 @@ func deterministicK(priv *btcec.PrivateKey, hash []byte) *big.Int {
 	}
 }
 
+// signWithK creates an ECDSA signature using the provided private key, hash, and deterministic K value for the secp256k1 curve.
 func signWithK(priv *btcec.PrivateKey, hash []byte, k *big.Int) (*big.Int, *big.Int, error) {
 	curve := btcec.S256()
 	n := curve.Params().N

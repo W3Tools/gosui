@@ -13,19 +13,24 @@ import (
 var pathRegex = regexp.MustCompile(`^m(\/[0-9]+')+$`)
 
 const (
-	Ed25519CURVE   = "ed25519 seed"
+	// Ed25519CURVE is the curve used for Ed25519 key derivation.
+	Ed25519CURVE = "ed25519 seed"
+	// HardenedOffset is the offset used for hardened derivation.
 	HardenedOffset = 0x80000000
 )
 
+// Key defines a structure that holds a key and its associated chain code.
 type Key struct {
 	Key       []byte
 	ChainCode []byte
 }
 
+// ReplaceDerive removes the quote character from the derivation path segment.
 func ReplaceDerive(val string) string {
 	return strings.Replace(val, "'", "", -1)
 }
 
+// IsValidPath checks if the given path is a valid derivation path.
 func IsValidPath(path string) bool {
 	if !pathRegex.MatchString(path) {
 		return false
@@ -40,6 +45,7 @@ func IsValidPath(path string) bool {
 	return true
 }
 
+// GetMasterKeyFromSeed derives the master key from the given seed.
 func GetMasterKeyFromSeed(seed string) (*Key, error) {
 	bs, err := hex.DecodeString(seed)
 	if err != nil {
@@ -56,6 +62,7 @@ func GetMasterKeyFromSeed(seed string) (*Key, error) {
 	return &Key{Key: sum[:32], ChainCode: sum[32:]}, nil
 }
 
+// CKDPriv performs child key derivation for a private key using the parent key and index.
 func CKDPriv(parent *Key, index uint32) (*Key, error) {
 	indexBuffer := make([]byte, 4)
 	indexBuffer[0] = byte(index >> 24)
@@ -78,6 +85,7 @@ func CKDPriv(parent *Key, index uint32) (*Key, error) {
 	return &Key{Key: sum[:32], ChainCode: sum[32:]}, nil
 }
 
+// DerivePath derives a key from the given derivation path and seed.
 func DerivePath(path string, seed string) (*Key, error) {
 	if !IsValidPath(path) {
 		return nil, fmt.Errorf("invalid derivation path")

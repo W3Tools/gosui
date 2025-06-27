@@ -10,6 +10,29 @@ import (
 	"reflect"
 )
 
+// jsonrpcRequest defines a JSON-RPC request message.
+type jsonrpcRequest struct {
+	Jsonrpc string          `json:"jsonrpc,omitempty"`
+	ID      json.RawMessage `json:"id,omitempty"`
+	Method  string          `json:"method,omitempty"`
+	Params  json.RawMessage `json:"params,omitempty"`
+}
+
+// jsonrpcResponse defines a JSON-RPC response message.
+type jsonrpcResponse struct {
+	Jsonrpc string          `json:"jsonrpc,omitempty"`
+	ID      json.RawMessage `json:"id,omitempty"`
+	Result  json.RawMessage `json:"result"`
+	Error   *jsonrpcError   `json:"error,omitempty"`
+}
+
+// jsonrpcError defines a JSON-RPC error message.
+type jsonrpcError struct {
+	Code    int64           `json:"code,omitempty"`
+	Message json.RawMessage `json:"message,omitempty"`
+}
+
+// request sends a JSON-RPC request and decodes the response into output.
 func (client *SuiClient) request(ctx context.Context, input SuiTransportRequestOptions, output interface{}) error {
 	reflectValue := reflect.ValueOf(output)
 	if output != nil && reflectValue.Kind() != reflect.Pointer {
@@ -61,15 +84,9 @@ func (client *SuiClient) request(ctx context.Context, input SuiTransportRequestO
 	return json.Unmarshal(v.Result, &output)
 }
 
-type jsonrpcRequest struct {
-	Jsonrpc string          `json:"jsonrpc,omitempty"`
-	ID      json.RawMessage `json:"id,omitempty"`
-	Method  string          `json:"method,omitempty"`
-	Params  json.RawMessage `json:"params,omitempty"`
-}
-
+// newRequestMessage creates a new JSON-RPC request message.
 func (client *SuiClient) newRequestMessage(method string, params []any) (*jsonrpcRequest, error) {
-	id, err := json.Marshal(client.requestId)
+	id, err := json.Marshal(client.requestID)
 	if err != nil {
 		return nil, err
 	}
@@ -83,16 +100,4 @@ func (client *SuiClient) newRequestMessage(method string, params []any) (*jsonrp
 	}
 
 	return requestMessage, nil
-}
-
-type jsonrpcResponse struct {
-	Jsonrpc string          `json:"jsonrpc,omitempty"`
-	ID      json.RawMessage `json:"id,omitempty"`
-	Result  json.RawMessage `json:"result"`
-	Error   *jsonrpcError   `json:"error,omitempty"`
-}
-
-type jsonrpcError struct {
-	Code    int64           `json:"code,omitempty"`
-	Message json.RawMessage `json:"message,omitempty"`
 }

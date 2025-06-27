@@ -5,31 +5,37 @@ import (
 	"errors"
 )
 
+// ObjectResponseError is an interface that defines the methods for handling different types of object response errors in the Sui blockchain.
 type ObjectResponseError interface {
 	isObjectResponseError()
 }
 
+// ObjectResponseNotExistsError defines an error that occurs when an object does not exist in the Sui blockchain.
 type ObjectResponseNotExistsError struct {
 	Code     string `json:"code"`
-	ObjectId string `json:"object_id"`
+	ObjectID string `json:"object_id"`
 }
 
+// ObjectResponseDynamicFieldNotFoundError defines an error that occurs when a dynamic field is not found in the Sui blockchain.
 type ObjectResponseDynamicFieldNotFoundError struct {
 	Code           string `json:"code"`
-	ParentObjectId string `json:"parent_object_id"`
+	ParentObjectID string `json:"parent_object_id"`
 }
 
+// ObjectResponseDeletedError defines an error that occurs when an object has been deleted in the Sui blockchain.
 type ObjectResponseDeletedError struct {
 	Code     string `json:"code"`
 	Digest   string `json:"digest"`
-	ObjectId string `json:"object_id"`
+	ObjectID string `json:"object_id"`
 	Version  uint64 `json:"version"`
 }
 
+// ObjectResponseUnknownError defines an error that occurs when an unknown error happens in the Sui blockchain.
 type ObjectResponseUnknownError struct {
 	Code string `json:"code"`
 }
 
+// ObjectResponseDisplayErrorError defines an error that occurs when a display error happens in the Sui blockchain.
 type ObjectResponseDisplayErrorError struct {
 	Code  string `json:"code"`
 	Error string `json:"error"`
@@ -41,10 +47,12 @@ func (ObjectResponseDeletedError) isObjectResponseError()              {}
 func (ObjectResponseUnknownError) isObjectResponseError()              {}
 func (ObjectResponseDisplayErrorError) isObjectResponseError()         {}
 
+// ObjectResponseErrorWrapper is a wrapper for ObjectResponseError that allows unmarshalling from JSON.
 type ObjectResponseErrorWrapper struct {
 	ObjectResponseError
 }
 
+// UnmarshalJSON custom unmarshaller for ObjectResponseErrorWrapper
 func (w *ObjectResponseErrorWrapper) UnmarshalJSON(data []byte) error {
 	type ErrorCode struct {
 		Code string `json:"code"`
@@ -101,14 +109,15 @@ func (w *ObjectResponseErrorWrapper) UnmarshalJSON(data []byte) error {
 	}
 }
 
+// MarshalJSON custom marshaller for ObjectResponseErrorWrapper
 func (w *ObjectResponseErrorWrapper) MarshalJSON() ([]byte, error) {
 	switch e := w.ObjectResponseError.(type) {
 	case ObjectResponseNotExistsError:
-		return json.Marshal(ObjectResponseNotExistsError{Code: e.Code, ObjectId: e.ObjectId})
+		return json.Marshal(ObjectResponseNotExistsError{Code: e.Code, ObjectID: e.ObjectID})
 	case ObjectResponseDynamicFieldNotFoundError:
-		return json.Marshal(ObjectResponseDynamicFieldNotFoundError{Code: e.Code, ParentObjectId: e.ParentObjectId})
+		return json.Marshal(ObjectResponseDynamicFieldNotFoundError{Code: e.Code, ParentObjectID: e.ParentObjectID})
 	case ObjectResponseDeletedError:
-		return json.Marshal(ObjectResponseDeletedError{Code: e.Code, Digest: e.Digest, ObjectId: e.ObjectId, Version: e.Version})
+		return json.Marshal(ObjectResponseDeletedError{Code: e.Code, Digest: e.Digest, ObjectID: e.ObjectID, Version: e.Version})
 	case ObjectResponseUnknownError:
 		return json.Marshal(ObjectResponseUnknownError{Code: e.Code})
 	case ObjectResponseDisplayErrorError:

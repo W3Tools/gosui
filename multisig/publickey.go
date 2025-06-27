@@ -13,20 +13,24 @@ import (
 	"golang.org/x/crypto/blake2b"
 )
 
+// MaxSignerInMultisig is the maximum number of signers allowed in a multisig.
+// MinSignerInMultisig is the minimum number of signers required in a multisig.
 const (
 	MaxSignerInMultisig = 10
 	MinSignerInMultisig = 1
 )
 
 var (
-	_ cryptography.PublicKey = (*MultiSigPublicKey)(nil)
+	_ cryptography.PublicKey = (*PublicKey)(nil)
 )
 
+// StringPubKeyEnumWeightPair defines a public key and weight pair for multisig.
 type StringPubKeyEnumWeightPair struct {
 	PubKey string `json:"pubKey"`
 	Weight uint8  `json:"weight"`
 }
 
+// ParsedPartialMultiSigSignature defines a parsed partial multisig signature.
 type ParsedPartialMultiSigSignature struct {
 	SignatureScheme cryptography.SignatureScheme
 	Signature       []byte
@@ -34,20 +38,23 @@ type ParsedPartialMultiSigSignature struct {
 	Weight          uint8
 }
 
-type MultiSigPublicKey struct {
+// PublicKey defines a multisig public key.
+type PublicKey struct {
 	rawBytes          []byte
 	multisigPublicKey cryptography.MultiSigPublicKeyStruct
 	publicKeys        []cryptography.MultiSigPublicKeyPair
 	cryptography.BasePublicKey
 }
 
+// PublicKeyWeightPair defines a public key and weight pair for multisig construction.
 type PublicKeyWeightPair struct {
 	PublicKey cryptography.PublicKey
 	Weight    uint8
 }
 
-func NewMultiSigPublicKey[T string | []byte | cryptography.MultiSigPublicKeyStruct](value T) (multisig *MultiSigPublicKey, err error) {
-	multisig = new(MultiSigPublicKey)
+// NewPublicKey creates a new multisig PublicKey from various input types.
+func NewPublicKey[T string | []byte | cryptography.MultiSigPublicKeyStruct](value T) (multisig *PublicKey, err error) {
+	multisig = new(PublicKey)
 	switch v := any(value).(type) {
 	case string:
 		rawBytes, err := b64.FromBase64(v)
@@ -126,22 +133,23 @@ func NewMultiSigPublicKey[T string | []byte | cryptography.MultiSigPublicKeyStru
 	return
 }
 
-func (multisig *MultiSigPublicKey) FromPublicKeys(publicKeys []PublicKeyWeightPair, threshold uint16) (*MultiSigPublicKey, error) {
+// FromPublicKeys creates a multisig PublicKey from a list of public keys and a threshold.
+func (multisig *PublicKey) FromPublicKeys(publicKeys []PublicKeyWeightPair, threshold uint16) (*PublicKey, error) {
 	pubkeys := make([]*cryptography.PubKeyEnumWeightPair, len(publicKeys))
 	for i, v := range publicKeys {
 		pubkeys[i] = &cryptography.PubKeyEnumWeightPair{PubKey: v.PublicKey.ToSuiBytes(), Weight: v.Weight}
 	}
 
-	return NewMultiSigPublicKey(cryptography.MultiSigPublicKeyStruct{PubKeyMap: pubkeys, Threshold: threshold})
+	return NewPublicKey(cryptography.MultiSigPublicKeyStruct{PubKeyMap: pubkeys, Threshold: threshold})
 }
 
-// Checks if two MultiSig public keys are equal
-func (key *MultiSigPublicKey) Equals(publicKey cryptography.PublicKey) bool {
-	return key.BasePublicKey.Equals(publicKey)
+// Equals checks if the multisig public key equals another public key.
+func (multisig *PublicKey) Equals(publicKey cryptography.PublicKey) bool {
+	return multisig.BasePublicKey.Equals(publicKey)
 }
 
-// Return the Sui address associated with this MultiSig public key
-func (multisig *MultiSigPublicKey) ToSuiAddress() string {
+// ToSuiAddress returns the Sui address associated with the multisig public key.
+func (multisig *PublicKey) ToSuiAddress() string {
 	tmp := new(bytes.Buffer)
 	tmp.WriteByte(cryptography.SignatureSchemeToFlag[cryptography.MultiSigScheme])
 
@@ -157,26 +165,28 @@ func (multisig *MultiSigPublicKey) ToSuiAddress() string {
 	return utils.NormalizeShortSuiAddress(hex.EncodeToString(sum256[:])[:64])
 }
 
-// Return the byte array representation of the MultiSig public key
-func (multisig *MultiSigPublicKey) ToRawBytes() []byte {
+// ToRawBytes returns the byte array representation of the multisig public key.
+func (multisig *PublicKey) ToRawBytes() []byte {
 	return multisig.rawBytes
 }
 
-func (multisig *MultiSigPublicKey) GetPublicKeys() []cryptography.MultiSigPublicKeyPair {
+// GetPublicKeys returns the public keys in the multisig public key.
+func (multisig *PublicKey) GetPublicKeys() []cryptography.MultiSigPublicKeyPair {
 	return multisig.publicKeys
 }
 
-func (multisig *MultiSigPublicKey) GetThreshold() uint16 {
+// GetThreshold returns the threshold of the multisig public key.
+func (multisig *PublicKey) GetThreshold() uint16 {
 	return multisig.multisigPublicKey.Threshold
 }
 
-// Return the Sui address associated with this MultiSig public key
-func (multisig *MultiSigPublicKey) Flag() uint8 {
+// Flag returns the signature scheme flag for the multisig public key.
+func (multisig *PublicKey) Flag() uint8 {
 	return cryptography.SignatureSchemeToFlag[cryptography.MultiSigScheme]
 }
 
-// Verifies that the signature is valid for for the provided message
-func (multisig *MultiSigPublicKey) Verify(message []byte, multisigSignature cryptography.SerializedSignature) (bool, error) {
+// Verify checks if the signature is valid for the provided message.
+func (multisig *PublicKey) Verify(message []byte, multisigSignature cryptography.SerializedSignature) (bool, error) {
 	parsed, err := cryptography.ParseSerializedSignature(multisigSignature)
 	if err != nil {
 		return false, err
@@ -230,7 +240,8 @@ func (multisig *MultiSigPublicKey) Verify(message []byte, multisigSignature cryp
 	return (signatureWeight >= multisig.multisigPublicKey.Threshold), nil
 }
 
-func (multisig *MultiSigPublicKey) CombinePartialSignatures(signatures []cryptography.SerializedSignature) (cryptography.SerializedSignature, error) {
+// CombinePartialSignatures combines multiple partial signatures into a multisig signature.
+func (multisig *PublicKey) CombinePartialSignatures(signatures []cryptography.SerializedSignature) (cryptography.SerializedSignature, error) {
 	if len(signatures) > MaxSignerInMultisig {
 		return "", fmt.Errorf("max number of signatures in a multisig is %d", MaxSignerInMultisig)
 	}
@@ -290,7 +301,7 @@ func (multisig *MultiSigPublicKey) CombinePartialSignatures(signatures []cryptog
 	return b64.ToBase64(tmp.Bytes()), nil
 }
 
-// Parse multisig structure into an array of individual signatures: signature scheme, the actual individual signature, public key and its weight.
+// ParsePartialSignatures parses a multisig structure into an array of individual signatures.
 func ParsePartialSignatures(multisig *cryptography.MultiSigStruct) ([]ParsedPartialMultiSigSignature, error) {
 	res := make([]ParsedPartialMultiSigSignature, len(multisig.Sigs))
 
@@ -326,6 +337,7 @@ func ParsePartialSignatures(multisig *cryptography.MultiSigStruct) ([]ParsedPart
 	return res, nil
 }
 
+// AsIndices returns the indices of set bits in the bitmap.
 func AsIndices(bitmap uint16) ([]byte, error) {
 	if bitmap > 1024 {
 		return nil, fmt.Errorf("invalid bitmap")
@@ -340,6 +352,7 @@ func AsIndices(bitmap uint16) ([]byte, error) {
 	return res, nil
 }
 
+// PublicKeyFromSuiBytes creates a PublicKey from Sui bytes or base64 string.
 func PublicKeyFromSuiBytes[T string | []byte](publicKey T) (pk cryptography.PublicKey, err error) {
 	var bs []byte
 	switch v := any(publicKey).(type) {

@@ -13,6 +13,7 @@ import (
 	"github.com/fardream/go-bcs/bcs"
 )
 
+// Transaction defines a programmable transaction builder for Sui.
 type Transaction struct {
 	client  *client.SuiClient
 	builder *sui_types.ProgrammableTransactionBuilder
@@ -22,6 +23,7 @@ type Transaction struct {
 	GasConfig *GasData              `json:"gasConfig"`
 }
 
+// GasData defines gas configuration for a transaction.
 type GasData struct {
 	Budget  uint64                 `json:"budget"`
 	Price   uint64                 `json:"price"`
@@ -29,6 +31,12 @@ type GasData struct {
 	Payment []*sui_types.ObjectRef `json:"payment"`
 }
 
+// TransactionInputGasCoin defines a gas coin input for a transaction.
+type TransactionInputGasCoin struct {
+	GasCoin bool `json:"gasCoin"`
+}
+
+// NewTransaction creates a new Transaction instance with a SuiClient.
 func NewTransaction(client *client.SuiClient) *Transaction {
 	return &Transaction{
 		client:  client,
@@ -38,27 +46,27 @@ func NewTransaction(client *client.SuiClient) *Transaction {
 	}
 }
 
+// TransactionBuilder returns the underlying ProgrammableTransactionBuilder.
 func (txb *Transaction) TransactionBuilder() *sui_types.ProgrammableTransactionBuilder {
 	return txb.builder
 }
 
+// Client returns the SuiClient associated with the transaction.
 func (txb *Transaction) Client() *client.SuiClient {
 	return txb.client
 }
 
+// Context returns the context associated with the transaction.
 func (txb *Transaction) Context() context.Context {
 	return txb.ctx
 }
 
-type TransactionInputGasCoin struct {
-	GasCoin bool `json:"gasCoin"`
-}
-
+// Gas returns a TransactionInputGasCoin indicating a gas coin input.
 func (txb *Transaction) Gas() *TransactionInputGasCoin {
 	return &TransactionInputGasCoin{GasCoin: true}
 }
 
-// Split coins into multiple parts
+// SplitCoins encodes a split coins command in the transaction.
 func (txb *Transaction) SplitCoins(ctx context.Context, coin interface{}, amounts []interface{}) (returnArguments []*sui_types.Argument, err error) {
 	if len(amounts) == 0 {
 		return nil, nil
@@ -95,7 +103,7 @@ func (txb *Transaction) SplitCoins(ctx context.Context, coin interface{}, amount
 	return txb.createTransactionResult(len(amounts)), nil
 }
 
-// Transfer objects to address
+// TransferObjects encodes a transfer objects command in the transaction.
 func (txb *Transaction) TransferObjects(ctx context.Context, objects []interface{}, address interface{}) error {
 	if len(objects) == 0 {
 		return nil
@@ -132,7 +140,7 @@ func (txb *Transaction) TransferObjects(ctx context.Context, objects []interface
 	return nil
 }
 
-// Merge Coins into one
+// MergeCoins encodes a merge coins command in the transaction.
 func (txb *Transaction) MergeCoins(ctx context.Context, destination interface{}, sources []interface{}) (err error) {
 	if len(sources) == 0 {
 		return nil
@@ -169,7 +177,7 @@ func (txb *Transaction) MergeCoins(ctx context.Context, destination interface{},
 	return nil
 }
 
-// Make MoveVec
+// MakeMoveVec encodes a make move vector command in the transaction.
 func (txb *Transaction) MakeMoveVec(ctx context.Context, vecType string, arguments []interface{}) ([]*sui_types.Argument, error) {
 	typeTag := txb.resolveMakeMoveVecType(vecType)
 	unresolvedParameter, err := txb.resolveMakeMoveElement(arguments)
@@ -197,19 +205,20 @@ func (txb *Transaction) MakeMoveVec(ctx context.Context, vecType string, argumen
 	return txb.createTransactionResult(1), nil
 }
 
+// MoveCall encodes a programmable Move call transaction.
 func (txb *Transaction) MoveCall(ctx context.Context, target string, arguments []interface{}, typeArguments []string) (returnArguments []*sui_types.Argument, err error) {
 	entry := strings.Split(target, "::")
 	if len(entry) != 3 {
 		return nil, fmt.Errorf("invalid target [%s]", target)
 	}
-	var pkg, mod, fn = utils.NormalizeSuiObjectId(entry[0]), entry[1], entry[2]
+	var pkg, mod, fn = utils.NormalizeSuiObjectID(entry[0]), entry[1], entry[2]
 
 	inputArguments, inputTypeArguments, returnsCount, err := txb.resolveMoveFunction(ctx, pkg, mod, fn, arguments, typeArguments)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse function arguments, err: %v", err)
 	}
 
-	packageId, err := sui_types.NewAddressFromHex(pkg)
+	packageID, err := sui_types.NewAddressFromHex(pkg)
 	if err != nil {
 		return nil, fmt.Errorf("invalid package address [%v]", err)
 	}
@@ -217,7 +226,7 @@ func (txb *Transaction) MoveCall(ctx context.Context, target string, arguments [
 	txb.builder.Command(
 		sui_types.Command{
 			MoveCall: &sui_types.ProgrammableMoveCall{
-				Package:       *packageId,
+				Package:       *packageID,
 				Module:        move_types.Identifier(mod),
 				Function:      move_types.Identifier(fn),
 				Arguments:     inputArguments,
@@ -229,6 +238,7 @@ func (txb *Transaction) MoveCall(ctx context.Context, target string, arguments [
 	return txb.createTransactionResult(returnsCount), nil
 }
 
+// Build encodes and builds the transaction, returning the transaction data and its BCS-encoded bytes.
 func (txb *Transaction) Build(ctx context.Context, sender string) (*sui_types.TransactionData, []byte, error) {
 	txb.SetSenderIfNotSet(sender)
 
@@ -256,6 +266,7 @@ func (txb *Transaction) Build(ctx context.Context, sender string) (*sui_types.Tr
 	return &tx, bs, err
 }
 
+// DryRunTransactionBlock encodes and simulates the transaction block without executing it on-chain.
 func (txb *Transaction) DryRunTransactionBlock(ctx context.Context) (*types.DryRunTransactionBlockResponse, error) {
 	if txb.Sender == nil {
 		return nil, fmt.Errorf("missing transaction sender")
@@ -269,7 +280,7 @@ func (txb *Transaction) DryRunTransactionBlock(ctx context.Context) (*types.DryR
 		*txb.Sender,
 		nil,
 		txb.builder.Finish(),
-		utils.MAX_GAS,
+		utils.MaxGas,
 		txb.GasConfig.Price,
 	)
 	bs, err := bcs.Marshal(tx)
@@ -280,6 +291,7 @@ func (txb *Transaction) DryRunTransactionBlock(ctx context.Context) (*types.DryR
 	return txb.client.DryRunTransactionBlock(ctx, types.DryRunTransactionBlockParams{TransactionBlock: bs})
 }
 
+// DevInspectTransactionBlock encodes and simulates the transaction block for developer inspection.
 func (txb *Transaction) DevInspectTransactionBlock(ctx context.Context) (*types.DevInspectResults, error) {
 	if txb.Sender == nil {
 		return nil, fmt.Errorf("missing transaction sender")
@@ -294,6 +306,7 @@ func (txb *Transaction) DevInspectTransactionBlock(ctx context.Context) (*types.
 	return txb.client.DevInspectTransactionBlock(ctx, types.DevInspectTransactionBlockParams{Sender: txb.Sender.String(), TransactionBlock: txBytes})
 }
 
+// SetSender sets the sender address for the transaction.
 func (txb *Transaction) SetSender(sender string) {
 	address, err := sui_types.NewAddressFromHex(sender)
 	if err != nil {
@@ -303,30 +316,36 @@ func (txb *Transaction) SetSender(sender string) {
 	txb.Sender = address
 }
 
+// SetSenderIfNotSet sets the sender address if it is not already set.
 func (txb *Transaction) SetSenderIfNotSet(sender string) {
 	if txb.Sender == nil {
 		txb.SetSender(sender)
 	}
 }
 
+// SetGasPrice sets the gas price for the transaction.
 func (txb *Transaction) SetGasPrice(price uint64) {
 	txb.GasConfig.Price = price
 }
 
+// SetGasBudget sets the gas budget for the transaction.
 func (txb *Transaction) SetGasBudget(budget uint64) {
 	txb.GasConfig.Budget = budget
 }
 
+// SetGasBudgetIfNotSet sets the gas budget if it is not already set.
 func (txb *Transaction) SetGasBudgetIfNotSet(budget uint64) {
 	if txb.GasConfig.Budget == 0 {
 		txb.GasConfig.Budget = budget
 	}
 }
 
+// SetGasOwner sets the gas owner for the transaction.
 func (txb *Transaction) SetGasOwner(owner string) {
 	txb.GasConfig.Owner = owner
 }
 
+// SetGasPayment sets the gas payment objects for the transaction.
 func (txb *Transaction) SetGasPayment(payments []*sui_types.ObjectRef) {
 	txb.GasConfig.Payment = payments
 }

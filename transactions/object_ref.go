@@ -8,16 +8,18 @@ import (
 	"github.com/W3Tools/gosui/types"
 )
 
+// ObjectStringRef defines a string-based reference to a Sui object.
 type ObjectStringRef struct {
-	ObjectId string `json:"objectId"`
+	ObjectID string `json:"objectId"`
 	Version  string `json:"version"`
 	Digest   string `json:"digest"`
 }
 
+// ToObjectRef converts an ObjectStringRef to a sui_types.ObjectRef.
 func (ref ObjectStringRef) ToObjectRef() (*sui_types.ObjectRef, error) {
-	objectId, err := sui_types.NewObjectIdFromHex(ref.ObjectId)
+	objectID, err := sui_types.NewObjectIdFromHex(ref.ObjectID)
 	if err != nil {
-		return nil, fmt.Errorf("can not create object id from hex [%s]: %v", ref.ObjectId, err)
+		return nil, fmt.Errorf("can not create object id from hex [%s]: %v", ref.ObjectID, err)
 	}
 	digest, err := sui_types.NewDigest(ref.Digest)
 	if err != nil {
@@ -28,9 +30,9 @@ func (ref ObjectStringRef) ToObjectRef() (*sui_types.ObjectRef, error) {
 		return nil, fmt.Errorf("can not parse version [%s] to uint64: %v", ref.Version, err)
 	}
 
-	return &sui_types.ObjectRef{ObjectId: *objectId, Version: version, Digest: *digest}, nil
+	return &sui_types.ObjectRef{ObjectId: *objectID, Version: version, Digest: *digest}, nil
 }
 
 func coinStructToObjectRef(coin types.CoinStruct) (*sui_types.ObjectRef, error) {
-	return ObjectStringRef{ObjectId: coin.CoinObjectId, Version: coin.Version, Digest: coin.Digest}.ToObjectRef()
+	return ObjectStringRef{ObjectID: coin.CoinObjectID, Version: coin.Version, Digest: coin.Digest}.ToObjectRef()
 }

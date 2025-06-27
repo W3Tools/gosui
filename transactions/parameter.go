@@ -10,24 +10,30 @@ import (
 	"github.com/W3Tools/gosui/utils"
 )
 
+// UnresolvedParameter defines unresolved parameters for a transaction command.
 type UnresolvedParameter struct {
 	Arguments UnresolvedArguments      `json:"argument"`
 	Objects   map[int]UnresolvedObject `json:"object"` // map key is index of argument
 }
 
+// UnresolvedArgument defines an unresolved argument for a transaction command.
 type UnresolvedArgument struct {
 	Pure     any
 	Object   *sui_types.ObjectArg
 	Argument *sui_types.Argument
 	resolved bool
 }
+
+// UnresolvedArguments defines a slice of unresolved arguments.
 type UnresolvedArguments []*UnresolvedArgument
 
+// UnresolvedObject defines an unresolved object for a transaction command.
 type UnresolvedObject struct {
-	ObjectId string
+	ObjectID string
 	Mutable  bool
 }
 
+// NewUnresolvedParameter creates and returns a new UnresolvedParameter instance.
 func NewUnresolvedParameter(count int) *UnresolvedParameter {
 	return &UnresolvedParameter{
 		Arguments: make(UnresolvedArguments, count),
@@ -35,6 +41,7 @@ func NewUnresolvedParameter(count int) *UnresolvedParameter {
 	}
 }
 
+// merge merges another UnresolvedParameter into the current one.
 func (up *UnresolvedParameter) merge(dest *UnresolvedParameter) {
 	if dest == nil {
 		return
@@ -48,6 +55,7 @@ func (up *UnresolvedParameter) merge(dest *UnresolvedParameter) {
 	}
 }
 
+// resolveAndParseToArguments resolves objects and parses all arguments to Sui types.
 func (up *UnresolvedParameter) resolveAndParseToArguments(ctx context.Context, suiClient *client.SuiClient, txb *Transaction) ([]sui_types.Argument, error) {
 	err := up.resolveObjects(ctx, suiClient)
 	if err != nil {
@@ -57,13 +65,14 @@ func (up *UnresolvedParameter) resolveAndParseToArguments(ctx context.Context, s
 	return up.toArguments(txb)
 }
 
+// resolveObjects resolves all unresolved objects using the Sui client.
 func (up *UnresolvedParameter) resolveObjects(ctx context.Context, suiClient *client.SuiClient) error {
 	var ids []string
 	for idx, resolve := range up.Objects {
-		if entry := cache.GetSharedObject(resolve.ObjectId); entry != nil {
+		if entry := cache.GetSharedObject(resolve.ObjectID); entry != nil {
 			up.Arguments[idx] = &UnresolvedArgument{Object: entry.ToObjectArg(resolve.Mutable), resolved: true}
 		} else {
-			ids = append(ids, resolve.ObjectId)
+			ids = append(ids, resolve.ObjectID)
 		}
 	}
 
@@ -76,7 +85,7 @@ func (up *UnresolvedParameter) resolveObjects(ctx context.Context, suiClient *cl
 
 		objectMap := utils.SliceToMap(objects, func(v *types.SuiObjectResponse) string {
 			if v.Data != nil {
-				return v.Data.ObjectId
+				return v.Data.ObjectID
 			}
 			return ""
 		})
@@ -92,9 +101,9 @@ func (up *UnresolvedParameter) resolveObjects(ctx context.Context, suiClient *cl
 				}
 			}
 
-			object := objectMap[utils.NormalizeSuiObjectId(resolveObject.ObjectId)]
+			object := objectMap[utils.NormalizeSuiObjectID(resolveObject.ObjectID)]
 			if object == nil {
-				return fmt.Errorf("can not fetch object with id [%s] at index %d", resolveObject.ObjectId, idx)
+				return fmt.Errorf("can not fetch object with id [%s] at index %d", resolveObject.ObjectID, idx)
 			}
 
 			objectArg, err := objectResponseToObjectArg(object, resolveObject.Mutable)
@@ -107,7 +116,7 @@ func (up *UnresolvedParameter) resolveObjects(ctx context.Context, suiClient *cl
 			if objectArg.SharedObject != nil {
 				cache.AddSharedObject(
 					&SharedObjectCacheEntry{
-						ObjectId:             &objectArg.SharedObject.Id,
+						ObjectID:             &objectArg.SharedObject.Id,
 						InitialSharedVersion: &objectArg.SharedObject.InitialSharedVersion,
 					},
 				)
@@ -118,6 +127,7 @@ func (up *UnresolvedParameter) resolveObjects(ctx context.Context, suiClient *cl
 	return nil
 }
 
+// toArguments parses all unresolved arguments to Sui types.
 func (up *UnresolvedParameter) toArguments(txb *Transaction) ([]sui_types.Argument, error) {
 	arguments := make([]sui_types.Argument, len(up.Arguments))
 	for idx, input := range up.Arguments {

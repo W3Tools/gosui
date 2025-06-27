@@ -5,10 +5,12 @@ import (
 	"errors"
 )
 
+// SuiParsedData is an interface that defines a Sui parsed data type.
 type SuiParsedData interface {
 	isSuiParsedData()
 }
 
+// SuiParsedMoveObjectData defines a Sui Move object parsed data.
 type SuiParsedMoveObjectData struct {
 	DataType          string            `json:"dataType"`
 	Type              string            `json:"type"`
@@ -16,18 +18,24 @@ type SuiParsedMoveObjectData struct {
 	Fields            MoveStructWrapper `json:"fields"`
 }
 
+// SuiParsedPackageData defines a Sui package parsed data.
 type SuiParsedPackageData struct {
 	DataType     string                  `json:"dataType"`
 	Disassembled *map[string]interface{} `json:"disassembled,omitempty"`
 }
 
+// isSuiParsedData implements the SuiParsedData interface for SuiParsedMoveObjectData.
 func (SuiParsedMoveObjectData) isSuiParsedData() {}
-func (SuiParsedPackageData) isSuiParsedData()    {}
 
+// isSuiParsedData implements the SuiParsedData interface for SuiParsedPackageData.
+func (SuiParsedPackageData) isSuiParsedData() {}
+
+// SuiParsedDataWrapper defines a wrapper for SuiParsedData to support custom JSON marshaling and unmarshaling.
 type SuiParsedDataWrapper struct {
 	SuiParsedData
 }
 
+// UnmarshalJSON decodes JSON data into a SuiParsedDataWrapper.
 func (w *SuiParsedDataWrapper) UnmarshalJSON(data []byte) error {
 	type DataType struct {
 		DataType string `json:"dataType"`
@@ -58,6 +66,7 @@ func (w *SuiParsedDataWrapper) UnmarshalJSON(data []byte) error {
 	}
 }
 
+// MarshalJSON encodes a SuiParsedDataWrapper into JSON.
 func (w *SuiParsedDataWrapper) MarshalJSON() ([]byte, error) {
 	switch data := w.SuiParsedData.(type) {
 	case SuiParsedMoveObjectData:

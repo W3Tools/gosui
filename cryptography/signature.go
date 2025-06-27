@@ -8,20 +8,18 @@ import (
 	"github.com/fardream/go-bcs/bcs"
 )
 
-/**
- * Pair of signature and corresponding public key
- */
+// SerializeSignatureInput defines the input required to serialize a signature, including the signature, scheme, and public key.
 type SerializeSignatureInput struct {
 	SignatureScheme SignatureScheme
 	Signature       []byte
 	PublicKey       PublicKey
 }
 
+// SerializedSignature defines a type for serialized signatures.
 type SerializedSignature = string
 
-/**
- * Takes in a signature, its associated signing scheme and a public key, then serializes this data
- */
+// ToSerializedSignature serializes a signature along with its signing scheme and public key into a base64 encoded string.
+// Takes in a signature, its associated signing scheme and a public key, then serializes this data
 func ToSerializedSignature(input SerializeSignatureInput) (string, error) {
 	if input.PublicKey == nil {
 		return "", fmt.Errorf("publicKey is required")
@@ -35,9 +33,7 @@ func ToSerializedSignature(input SerializeSignatureInput) (string, error) {
 	return b64.ToBase64(serializedSignature.Bytes()), nil
 }
 
-/**
- * Decodes a serialized signature into its constituent components: the signature scheme, the actual signature, and the public key
- */
+// ParseSerializedSignature decodes a serialized signature into its constituent components: the signature scheme, the actual signature, and the public key
 func ParseSerializedSignature(serializedSignature SerializedSignature) (*SerializedSignatureParsedData, error) {
 	bs, err := b64.FromBase64(serializedSignature)
 	if err != nil {
@@ -82,6 +78,7 @@ func ParseSerializedSignature(serializedSignature SerializedSignature) (*Seriali
 	}
 }
 
+// SerializedSignatureParsedData defines a struct that holds the parsed data from a serialized signature.
 type SerializedSignatureParsedData struct {
 	SerializedSignature SerializedSignature `json:"serializedSignature"`
 	SignatureScheme     string              `json:"signatureScheme"`

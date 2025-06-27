@@ -11,7 +11,7 @@ import (
 	"golang.org/x/crypto/blake2b"
 )
 
-// Utils
+// B64ToSuiPrivateKey converts a base64 encoded Sui private key to a hex string representation.
 func B64ToSuiPrivateKey(b64 string) (string, error) {
 	b64Decode, err := base64.StdEncoding.DecodeString(b64)
 	if err != nil {
@@ -25,6 +25,7 @@ func B64ToSuiPrivateKey(b64 string) (string, error) {
 	return fmt.Sprintf("0x%s", hexPriKey[4:]), nil
 }
 
+// SuiPrivateKeyToB64 converts a Sui private key in hex format to a base64 encoded string.
 func SuiPrivateKeyToB64(pk string) (string, error) {
 	if len(pk) != 66 {
 		return "", fmt.Errorf("unknown private key. %s", pk)
@@ -39,6 +40,7 @@ func SuiPrivateKeyToB64(pk string) (string, error) {
 	return base64.StdEncoding.EncodeToString(byteKey), nil
 }
 
+// B64PublicKeyToSuiAddress converts a base64 encoded public key to a Sui address.
 func B64PublicKeyToSuiAddress(b64 string) (string, error) {
 	b64Decode, err := base64.StdEncoding.DecodeString(b64)
 	if err != nil {
@@ -48,12 +50,14 @@ func B64PublicKeyToSuiAddress(b64 string) (string, error) {
 	return fmt.Sprintf("0x%s", hex.EncodeToString(addrBytes[:])[:64]), nil
 }
 
+// Ed25519PublicKeyToB64PublicKey converts an Ed25519 public key to a base64 encoded string.
 func Ed25519PublicKeyToB64PublicKey(ed25519PubKey ed25519.PublicKey) string {
 	newPubkey := []byte{0}
 	newPubkey = append(newPubkey, ed25519PubKey...)
 	return base64.StdEncoding.EncodeToString(newPubkey)
 }
 
+// ParseDevInspectReturnValue parses the return value from a dev inspect call.
 func ParseDevInspectReturnValue(v [2]interface{}) ([]byte, error) {
 	// v[0] --> bcs data
 	// v[1] --> data type

@@ -10,71 +10,72 @@ import (
 )
 
 var (
-	_ cryptography.Keypair = (*Ed25519Keypair)(nil)
+	_ cryptography.Keypair = (*Keypair)(nil)
 )
 
-const DefaultEd25519DerivationPath = "m/44'/784'/0'/0'/0'"
+// DefaultDerivationPath is the default derivation path for Ed25519 keypairs.
+const DefaultDerivationPath = "m/44'/784'/0'/0'/0'"
 
-// Ed25519 Keypair data. The publickey is the 32-byte public key and the secretkey is 64-byte
-// Where the first 32 bytes is the secret key and the last 32 bytes is the public key.
-type Ed25519KeypairData struct {
+// KeypairData defines the public key (32 bytes) and secret key (64 bytes) for an Ed25519 keypair.
+type KeypairData struct {
 	PublicKey []byte
 	SecretKey []byte
 }
 
-// An Ed25519 Keypair used for signing transactions.
-type Ed25519Keypair struct {
-	keypair *Ed25519KeypairData
+// Keypair defines an Ed25519 keypair used for signing transactions.
+type Keypair struct {
+	keypair *KeypairData
 	cryptography.BaseKeypair
 }
 
-// Create or generate a new Ed25519 keypair instance.
-func NewEd25519Keypair(keypair *Ed25519KeypairData) (*Ed25519Keypair, error) {
+// NewKeypair creates or generates a new Ed25519 keypair instance.
+func NewKeypair(keypair *KeypairData) (*Keypair, error) {
 	if keypair == nil {
 		publicKey, privateKey, err := ed25519.GenerateKey(rand.Reader)
 		if err != nil {
 			return nil, err
 		}
-		keypair = &Ed25519KeypairData{PublicKey: publicKey, SecretKey: privateKey}
+		keypair = &KeypairData{PublicKey: publicKey, SecretKey: privateKey}
 	}
 
-	kp := &Ed25519Keypair{keypair: keypair}
+	kp := &Keypair{keypair: keypair}
 	kp.SetSelf(kp)
 	return kp, nil
 }
 
-// Get the key scheme of the keypair ED25519
-func (k *Ed25519Keypair) GetKeyScheme() cryptography.SignatureScheme {
+// GetKeyScheme returns the signature scheme of the Ed25519 keypair.
+func (k *Keypair) GetKeyScheme() cryptography.SignatureScheme {
 	return cryptography.Ed25519Scheme
 }
 
-// The public key for this Ed25519 keypair
-func (k *Ed25519Keypair) GetPublicKey() (cryptography.PublicKey, error) {
-	return NewEd25519PublicKey(k.keypair.PublicKey)
+// GetPublicKey returns the public key of the Ed25519 keypair.
+func (k *Keypair) GetPublicKey() (cryptography.PublicKey, error) {
+	return NewPublicKey(k.keypair.PublicKey)
 }
 
-// The Bech32 secret key string for this Ed25519 keypair
-func (k *Ed25519Keypair) GetSecretKey() (string, error) {
+// GetSecretKey returns the secret key of the Ed25519 keypair as a base64 encoded string.
+func (k *Keypair) GetSecretKey() (string, error) {
 	return cryptography.EncodeSuiPrivateKey(k.keypair.SecretKey[:cryptography.PrivateKeySize], k.GetKeyScheme())
 }
 
-func (k *Ed25519Keypair) Sign(data []byte) ([]byte, error) {
+// Sign returns the signature for the provided data using Ed25519.
+func (k *Keypair) Sign(data []byte) ([]byte, error) {
 	return k.SignData(data)
 }
 
-// Return the signature for the provided data using Ed25519.
-func (k *Ed25519Keypair) SignData(data []byte) ([]byte, error) {
+// SignData signs the provided data using the Ed25519 keypair's secret key.
+func (k *Keypair) SignData(data []byte) ([]byte, error) {
 	return ed25519.Sign(k.keypair.SecretKey, data), nil
 }
 
-// Generate a new random Ed25519 keypair
-func GenerateEd25519Keypair() (*Ed25519Keypair, error) {
-	return NewEd25519Keypair(nil)
+// GenerateKeypair creates a new Ed25519 keypair with a random secret key.
+func GenerateKeypair() (*Keypair, error) {
+	return NewKeypair(nil)
 }
 
-// Create a Ed25519 keypair from a raw secret key byte array, also known as seed.
+// FromSecretKey creates an Ed25519 keypair from a raw secret key byte array (seed).
 // This is NOT the private scalar which is result of hashing and bit clamping of the raw secret key.
-func FromSecretKey(secretKey []byte, skipValidation bool) (*Ed25519Keypair, error) {
+func FromSecretKey(secretKey []byte, skipValidation bool) (*Keypair, error) {
 	secretKeyLength := len(secretKey)
 	if secretKeyLength != cryptography.PrivateKeySize {
 		return nil, fmt.Errorf("wrong secretKey size. expected %d bytes, got %d", cryptography.PrivateKeySize, secretKeyLength)
@@ -91,16 +92,16 @@ func FromSecretKey(secretKey []byte, skipValidation bool) (*Ed25519Keypair, erro
 		}
 	}
 
-	return NewEd25519Keypair(&Ed25519KeypairData{PublicKey: publicKey, SecretKey: privateKey})
+	return NewKeypair(&KeypairData{PublicKey: publicKey, SecretKey: privateKey})
 }
 
-// Derive Ed25519 keypair from mnemonics and path
+// DeriveKeypair derives an Ed25519 keypair from a mnemonic phrase and a derivation path.
 // The mnemonics must be normalized and validated against the english wordlist.
 // If path is none, it will default to m/44'/784'/0'/0'/0'
 // Otherwise the path must be compliant to SLIP-0010 in form m/44'/784'/{account_index}'/{change_index}'/{address_index}'.
-func DeriveKeypair(mnemonics, path string) (*Ed25519Keypair, error) {
+func DeriveKeypair(mnemonics, path string) (*Keypair, error) {
 	if path == "" {
-		path = DefaultEd25519DerivationPath
+		path = DefaultDerivationPath
 	}
 	if !cryptography.IsValidHardenedPath(path) {
 		return nil, fmt.Errorf("invalid derivation path")
@@ -119,12 +120,12 @@ func DeriveKeypair(mnemonics, path string) (*Ed25519Keypair, error) {
 	return FromSecretKey(key.Key, false)
 }
 
-// Derive Ed25519 keypair from mnemonicSeed and path.
+// DeriveKeypairFromSeed derives an Ed25519 keypair from a seed hex string and a derivation path.
 // If path is none, it will default to m/44'/784'/0'/0'/0'
 // Otherwise the path must be compliant to SLIP-0010 in form m/44'/784'/{account_index}'/{change_index}'/{address_index}'.
-func DeriveKeypairFromSeed(seedHex, path string) (*Ed25519Keypair, error) {
+func DeriveKeypairFromSeed(seedHex, path string) (*Keypair, error) {
 	if path == "" {
-		path = DefaultEd25519DerivationPath
+		path = DefaultDerivationPath
 	}
 
 	if !cryptography.IsValidHardenedPath(path) {
@@ -138,10 +139,12 @@ func DeriveKeypairFromSeed(seedHex, path string) (*Ed25519Keypair, error) {
 	return FromSecretKey(key.Key, false)
 }
 
-func (kp *Ed25519Keypair) PublicKey() []byte {
-	return kp.keypair.PublicKey
+// PublicKey returns the public key of the Ed25519 keypair.
+func (k *Keypair) PublicKey() []byte {
+	return k.keypair.PublicKey
 }
 
-func (kp *Ed25519Keypair) SecretKey() []byte {
-	return kp.keypair.SecretKey
+// SecretKey returns the secret key of the Ed25519 keypair.
+func (k *Keypair) SecretKey() []byte {
+	return k.keypair.SecretKey
 }

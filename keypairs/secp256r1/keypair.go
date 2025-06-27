@@ -17,60 +17,62 @@ import (
 )
 
 var (
-	_ cryptography.Keypair = (*Secp256r1Keypair)(nil)
+	_ cryptography.Keypair = (*Keypair)(nil)
 )
 
-const DefaultSecp256r1DerivationPath = "m/74'/784'/0'/0/0"
+// DefaultDerivationPath is the default derivation path for Secp256r1 keypairs.
+const DefaultDerivationPath = "m/74'/784'/0'/0/0"
 
-// Secp256r1 Keypair data
-type Secp256r1KeypairData struct {
+// KeypairData defines the public and secret key data for a Secp256r1 keypair.
+type KeypairData struct {
 	PublicKey []byte
 	SecretKey []byte
 }
 
-// An Secp256r1 Keypair used for signing transactions.
-type Secp256r1Keypair struct {
-	keypair *Secp256r1KeypairData
+// Keypair defines a Secp256r1 keypair used for signing transactions.
+type Keypair struct {
+	keypair *KeypairData
 	cryptography.BaseKeypair
 }
 
-// Create or generate random keypair instance.
-func NewSecp256r1Keypair(keypair *Secp256r1KeypairData) (*Secp256r1Keypair, error) {
+// NewKeypair creates a new Secp256r1 keypair.
+func NewKeypair(keypair *KeypairData) (*Keypair, error) {
 	if keypair == nil {
 		privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 		if err != nil {
 			return nil, err
 		}
 		publicKey := elliptic.MarshalCompressed(elliptic.P256(), privateKey.PublicKey.X, privateKey.PublicKey.Y)
-		keypair = &Secp256r1KeypairData{PublicKey: publicKey, SecretKey: privateKey.D.Bytes()}
+		keypair = &KeypairData{PublicKey: publicKey, SecretKey: privateKey.D.Bytes()}
 	}
 
-	kp := &Secp256r1Keypair{keypair: keypair}
+	kp := &Keypair{keypair: keypair}
 	kp.SetSelf(kp)
 	return kp, nil
 }
 
-// Get the key scheme of the keypair Secp256r1
-func (k *Secp256r1Keypair) GetKeyScheme() cryptography.SignatureScheme {
+// GetKeyScheme returns the signature scheme of the keypair.
+func (k *Keypair) GetKeyScheme() cryptography.SignatureScheme {
 	return cryptography.Secp256r1Scheme
 }
 
-// The public key for this keypair
-func (k *Secp256r1Keypair) GetPublicKey() (cryptography.PublicKey, error) {
-	return NewSecp256r1PublicKey(k.keypair.PublicKey)
+// GetPublicKey returns the public key of the keypair.
+func (k *Keypair) GetPublicKey() (cryptography.PublicKey, error) {
+	return NewPublicKey(k.keypair.PublicKey)
 }
 
-// The Bech32 secret key string for this Secp256r1 keypair
-func (k *Secp256r1Keypair) GetSecretKey() (string, error) {
+// GetSecretKey returns the secret key of the keypair as a hex-encoded string.
+func (k *Keypair) GetSecretKey() (string, error) {
 	return cryptography.EncodeSuiPrivateKey(k.keypair.SecretKey, k.GetKeyScheme())
 }
 
-func (k *Secp256r1Keypair) Sign(data []byte) ([]byte, error) {
+// Sign signs the provided data and returns the signature.
+func (k *Keypair) Sign(data []byte) ([]byte, error) {
 	return k.SignData(data)
 }
 
-// Return the signature for the provided data.
-func (k *Secp256r1Keypair) SignData(data []byte) ([]byte, error) {
+// SignData signs the provided data using the keypair and returns the signature.
+func (k *Keypair) SignData(data []byte) ([]byte, error) {
 	hexMessage := sha256.Sum256(data)
 
 	privKey := new(ecdsa.PrivateKey)
@@ -85,15 +87,15 @@ func (k *Secp256r1Keypair) SignData(data []byte) ([]byte, error) {
 	return append(r.Bytes(), s.Bytes()...), nil
 }
 
-// Generate a new random keypair
-func GenerateSecp256r1Keypair() (*Secp256r1Keypair, error) {
-	return NewSecp256r1Keypair(nil)
+// GenerateKeypair generates a new Secp256r1 keypair with a random secret key.
+func GenerateKeypair() (*Keypair, error) {
+	return NewKeypair(nil)
 }
 
-// Create a keypair from a raw secret key byte array.
+// FromSecretKey creates a keypair from a raw secret key byte array.
 // This method should only be used to recreate a keypair from a previously generated secret key.
 // Generating keypairs from a random seed should be done with the {@link Keypair.fromSeed} method.
-func FromSecretKey(secretKey []byte, skipValidation bool) (*Secp256r1Keypair, error) {
+func FromSecretKey(secretKey []byte, skipValidation bool) (*Keypair, error) {
 	privateKey := new(ecdsa.PrivateKey)
 	privateKey.PublicKey.Curve = elliptic.P256()
 	privateKey.D = new(big.Int).SetBytes(secretKey)
@@ -112,11 +114,11 @@ func FromSecretKey(secretKey []byte, skipValidation bool) (*Secp256r1Keypair, er
 			return nil, errors.New("provided secretKey is invalid")
 		}
 	}
-	return NewSecp256r1Keypair(&Secp256r1KeypairData{PublicKey: publicKey, SecretKey: secretKey})
+	return NewKeypair(&KeypairData{PublicKey: publicKey, SecretKey: secretKey})
 }
 
-// Generate a keypair from a 32 byte seed.
-func FromSeed(seed []byte) (*Secp256r1Keypair, error) {
+// FromSeed generates a Secp256r1 keypair from a 32-byte seed.
+func FromSeed(seed []byte) (*Keypair, error) {
 	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), strings.NewReader(string(seed)))
 	if err != nil {
 		return nil, err
@@ -124,15 +126,15 @@ func FromSeed(seed []byte) (*Secp256r1Keypair, error) {
 	publicKey := elliptic.MarshalCompressed(privateKey.PublicKey.Curve, privateKey.PublicKey.X, privateKey.PublicKey.Y)
 	secretKey := privateKey.D.Bytes()
 
-	return NewSecp256r1Keypair(&Secp256r1KeypairData{PublicKey: publicKey, SecretKey: secretKey})
+	return NewKeypair(&KeypairData{PublicKey: publicKey, SecretKey: secretKey})
 }
 
-// Derive Secp256r1 keypair from mnemonics and path. The mnemonics must be normalized and validated against the english wordlist.
+// DeriveKeypair derives a Secp256r1 keypair from mnemonics and a specified derivation path.
 // If path is none, it will default to m/74'/784'/0'/0/0
 // Otherwise the path must be compliant to BIP-32 in form m/74'/784'/{account_index}'/{change_index}/{address_index}.
-func DeriveKeypair(mnemonics string, path string) (*Secp256r1Keypair, error) {
+func DeriveKeypair(mnemonics string, path string) (*Keypair, error) {
 	if path == "" {
-		path = DefaultSecp256r1DerivationPath
+		path = DefaultDerivationPath
 	}
 
 	if !cryptography.IsValidBIP32Path(path) {
@@ -184,10 +186,12 @@ func deriveChildKeyFromPath(masterKey *bip32.Key, path string) (*bip32.Key, erro
 	return key, nil
 }
 
-func (kp *Secp256r1Keypair) PublicKey() []byte {
-	return kp.keypair.PublicKey
+// PublicKey returns the public key bytes of the keypair.
+func (k *Keypair) PublicKey() []byte {
+	return k.keypair.PublicKey
 }
 
-func (kp *Secp256r1Keypair) SecretKey() []byte {
-	return kp.keypair.SecretKey
+// SecretKey returns the secret key bytes of the keypair.
+func (k *Keypair) SecretKey() []byte {
+	return k.keypair.SecretKey
 }

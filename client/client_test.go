@@ -17,13 +17,13 @@ func TestSuiClientConnectionReuse(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	version, err := c.GetRpcApiVersion(ctx)
+	version, err := c.GetRPCAPIVersion(ctx)
 	if err != nil {
 		t.Fatalf("Failed to get RPC API version: %v", err)
 	}
 	t.Logf("RPC API Version: %s", version)
 
-	version1, err := c.GetRpcApiVersion(ctx)
+	version1, err := c.GetRPCAPIVersion(ctx)
 	if err != nil {
 		t.Fatalf("Failed to get RPC API version: %v", err)
 	}

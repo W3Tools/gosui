@@ -5,10 +5,12 @@ import (
 	"errors"
 )
 
+// RawData is an interface that defines a Sui raw data type.
 type RawData interface {
 	isRawData()
 }
 
+// RawDataMoveObject defines a Sui Move object raw data.
 type RawDataMoveObject struct {
 	DataType          string `json:"dataType"`
 	Type              string `json:"type"`
@@ -17,6 +19,7 @@ type RawDataMoveObject struct {
 	BcsBytes          string `json:"bcsBytes"`
 }
 
+// RawDataPackage defines a Sui package raw data.
 type RawDataPackage struct {
 	DataType        string                 `json:"dataType"`
 	ID              string                 `json:"id"`
@@ -26,13 +29,18 @@ type RawDataPackage struct {
 	LinkageTable    map[string]UpgradeInfo `json:"linkageTable"`
 }
 
+// isRawData implements the RawData interface for RawDataMoveObject.
 func (RawDataMoveObject) isRawData() {}
-func (RawDataPackage) isRawData()    {}
 
+// isRawData implements the RawData interface for RawDataPackage.
+func (RawDataPackage) isRawData() {}
+
+// RawDataWrapper defines a wrapper for RawData to support custom JSON marshaling and unmarshaling.
 type RawDataWrapper struct {
 	RawData
 }
 
+// UnmarshalJSON decodes JSON data into a RawDataWrapper.
 func (w *RawDataWrapper) UnmarshalJSON(data []byte) error {
 	type DataType struct {
 		DataType string `json:"dataType"`
@@ -62,6 +70,7 @@ func (w *RawDataWrapper) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON encodes a RawDataWrapper into JSON.
 func (w *RawDataWrapper) MarshalJSON() ([]byte, error) {
 	switch rd := w.RawData.(type) {
 	case RawDataMoveObject:

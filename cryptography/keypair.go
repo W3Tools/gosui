@@ -10,20 +10,25 @@ import (
 )
 
 const (
-	PrivateKeySize      = 32
+	// PrivateKeySize is the size of a Sui private key in bytes.
+	PrivateKeySize = 32
+	// SuiPrivateKeyPrefix is the Bech32 prefix for Sui private keys.
 	SuiPrivateKeyPrefix = "suiprivkey"
 )
 
+// ParsedKeypair defines a structure that holds the signature scheme and the secret key in bytes.
 type ParsedKeypair struct {
 	Scheme    SignatureScheme
 	SecretKey []byte
 }
 
+// SignatureWithBytes defines a structure that holds the base64 encoded bytes of the signed message and the serialized signature.
 type SignatureWithBytes struct {
 	Bytes     string
 	Signature SerializedSignature
 }
 
+// Signer is an interface that defines the methods for signing messages and retrieving public keys.
 type Signer interface {
 	Sign(bs []byte) ([]byte, error)
 	SignWithIntent(bs []byte, intent IntentScope) (*SignatureWithBytes, error)
@@ -35,19 +40,19 @@ type Signer interface {
 	GetPublicKey() (PublicKey, error)
 }
 
+// Keypair is an interface that extends the Signer interface and adds a method to retrieve the secret key.
 type Keypair interface {
 	Signer
 	GetSecretKey() (string, error)
 }
 
+// BaseSigner defines a struct that implements the Signer interface.
 type BaseSigner struct {
 	self Signer
 }
 
-/**
- * Sign messages with a specific intent. By combining the message bytes with the intent before hashing and signing,
- * it ensures that a signed message is tied to a specific purpose and domain separator is provided
- */
+// SignWithIntent signs a message with a specific intent scope. By combining the message bytes with the intent before hashing and signing,
+// it ensures that a signed message is tied to a specific purpose and domain separator is provided
 func (signer *BaseSigner) SignWithIntent(bs []byte, intent IntentScope) (*SignatureWithBytes, error) {
 	intentMessage := MessageWithIntent(intent, bs)
 	digest := blake2b.Sum256(intentMessage)
@@ -74,16 +79,12 @@ func (signer *BaseSigner) SignWithIntent(bs []byte, intent IntentScope) (*Signat
 	return &SignatureWithBytes{Bytes: b64.ToBase64(bs), Signature: signature}, nil
 }
 
-/**
- * Signs provided transaction block by calling `signWithIntent()` with a `TransactionData` provided as intent scope
- */
+// SignTransactionBlock signs provided transaction block by calling `signWithIntent()` with a `TransactionData` provided as intent scope
 func (signer *BaseSigner) SignTransactionBlock(bs []byte) (*SignatureWithBytes, error) {
 	return signer.SignWithIntent(bs, TransactionData)
 }
 
-/**
- * Signs provided personal message by calling `signWithIntent()` with a `PersonalMessage` provided as intent scope
- */
+// SignPersonalMessage signs provided personal message by calling `signWithIntent()` with a `PersonalMessage` provided as intent scope
 func (signer *BaseSigner) SignPersonalMessage(bs []byte) (*SignatureWithBytes, error) {
 	msg, err := bcs.Marshal(bs)
 	if err != nil {
@@ -93,6 +94,7 @@ func (signer *BaseSigner) SignPersonalMessage(bs []byte) (*SignatureWithBytes, e
 	return signer.SignWithIntent(msg, PersonalMessage)
 }
 
+// ToSuiAddress converts the public key of the signer to a Sui address.
 func (signer *BaseSigner) ToSuiAddress() string {
 	publicKey, _ := signer.self.GetPublicKey()
 	return publicKey.ToSuiAddress()
@@ -104,19 +106,19 @@ func (signer *BaseSigner) ToSuiAddress() string {
 // func (signer *BaseSigner) GetKeyScheme() SignatureScheme { return "" }
 // func (signer *BaseSigner) GetPublicKey() PublicKey       { return nil }
 
+// BaseKeypair defines a struct that implements the Keypair interface.
 type BaseKeypair struct {
 	BaseSigner
 }
 
+// SetSelf sets the signer for the BaseKeypair.
 func (base *BaseKeypair) SetSelf(signer Signer) {
 	base.self = signer
 }
 
-/**
- * This returns an ParsedKeypair object based by validating the
- * 33-byte Bech32 encoded string starting with `suiprivkey`, and
- * parse out the signature scheme and the private key in bytes.
- */
+// DecodeSuiPrivateKey decodes a Bech32 encoded Sui private key string into a ParsedKeypair object.
+// This returns a ParsedKeypair object by validating the 33-byte Bech32 encoded string starting with `suiprivkey`,
+// and parses out the signature scheme and the private key in bytes.
 func DecodeSuiPrivateKey(value string) (*ParsedKeypair, error) {
 	prefix, words, err := bech32.Decode(value)
 	if err != nil {
@@ -134,11 +136,8 @@ func DecodeSuiPrivateKey(value string) (*ParsedKeypair, error) {
 	return &ParsedKeypair{Scheme: signatureScheme, SecretKey: secretKey}, nil
 }
 
-/**
- * This returns a Bech32 encoded string starting with `suiprivkey`,
- * encoding 33-byte `flag || bytes` for the given the 32-byte private
- * key and its signature scheme.
- */
+// EncodeSuiPrivateKey returns a Bech32 encoded string starting with `suiprivkey`,
+// encoding 33-byte `flag || bytes` for the given 32-byte private key and its signature scheme.
 func EncodeSuiPrivateKey(bytes []byte, scheme string) (string, error) {
 	if len(bytes) != PrivateKeySize {
 		return "", fmt.Errorf("invalid bytes length")
