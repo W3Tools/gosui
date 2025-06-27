@@ -14,18 +14,18 @@ import (
 )
 
 var (
-	_ cryptography.PublicKey = (*Secp256r1PublicKey)(nil)
+	_ cryptography.PublicKey = (*PublicKey)(nil)
 )
 
-// A Secp256r1 public key
-type Secp256r1PublicKey struct {
+// PublicKey defines a Secp256r1 public key used for verifying signatures.
+type PublicKey struct {
 	data []byte
 	cryptography.BasePublicKey
 }
 
-// Create a new Secp256r1PublicKey object
-func NewSecp256r1PublicKey[T string | []byte](value T) (publicKey *Secp256r1PublicKey, err error) {
-	publicKey = new(Secp256r1PublicKey)
+// NewPublicKey creates a new Secp256r1 public key from a base64 encoded string or byte slice.
+func NewPublicKey[T string | []byte](value T) (publicKey *PublicKey, err error) {
+	publicKey = new(PublicKey)
 	switch v := any(value).(type) {
 	case string:
 		publicKey.data, err = b64.FromBase64(v)
@@ -42,23 +42,23 @@ func NewSecp256r1PublicKey[T string | []byte](value T) (publicKey *Secp256r1Publ
 	return
 }
 
-// Checks if two Secp256r1 public keys are equal
-func (k *Secp256r1PublicKey) Equals(publicKey cryptography.PublicKey) bool {
+// Equals checks if the provided public key is equal to this Secp256r1 public key.
+func (k *PublicKey) Equals(publicKey cryptography.PublicKey) bool {
 	return k.BasePublicKey.Equals(publicKey)
 }
 
-// Return the byte array representation of the Secp256r1 public key
-func (k *Secp256r1PublicKey) ToRawBytes() []byte {
+// ToRawBytes returns the byte array representation of the Secp256r1 public key.
+func (k *PublicKey) ToRawBytes() []byte {
 	return k.data
 }
 
-// Return the Sui address associated with this Secp256r1 public key
-func (k *Secp256r1PublicKey) Flag() uint8 {
+// Flag returns the Sui address flag associated with this Secp256r1 public key.
+func (k *PublicKey) Flag() uint8 {
 	return cryptography.SignatureSchemeToFlag[cryptography.Secp256r1Scheme]
 }
 
-// Verifies that the signature is valid for for the provided message
-func (k *Secp256r1PublicKey) Verify(message []byte, signature cryptography.SerializedSignature) (bool, error) {
+// Verify checks whether the signature is valid for the provided message using the Secp256r1 public key.
+func (k *PublicKey) Verify(message []byte, signature cryptography.SerializedSignature) (bool, error) {
 	parsed, err := cryptography.ParseSerializedSignature(signature)
 	if err != nil {
 		return false, err

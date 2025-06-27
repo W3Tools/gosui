@@ -9,7 +9,7 @@ import (
 	"math/big"
 )
 
-// DeterministicSign generates deterministic ECDSA signature using RFC 6979 for secp256r1 curve
+// deterministicSign generates a deterministic ECDSA signature using RFC 6979 for the secp256r1 curve.
 func deterministicSign(priv *ecdsa.PrivateKey, hash []byte) (*big.Int, *big.Int, error) {
 	curve := elliptic.P256()
 	k := deterministicK(priv.D, hash)
@@ -27,7 +27,7 @@ func deterministicSign(priv *ecdsa.PrivateKey, hash []byte) (*big.Int, *big.Int,
 	return r, s, nil
 }
 
-// RFC 6979 deterministic K generation
+// deterministicK generates a deterministic K value according to RFC 6979 for the secp256r1 curve.
 func deterministicK(priv *big.Int, hash []byte) *big.Int {
 	curve := elliptic.P256()
 	q := curve.Params().N
@@ -79,6 +79,7 @@ func deterministicK(priv *big.Int, hash []byte) *big.Int {
 	}
 }
 
+// signWithK creates an ECDSA signature using the provided private key, hash, and deterministic K value for the secp256r1 curve.
 func signWithK(priv *ecdsa.PrivateKey, hash []byte, k *big.Int) (*big.Int, *big.Int, error) {
 	curve := priv.Curve
 	n := curve.Params().N

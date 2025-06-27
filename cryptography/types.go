@@ -7,26 +7,31 @@ import (
 	"github.com/fardream/go-bcs/bcs"
 )
 
+// CompressedSignature defines a type for compressed signatures.
 type CompressedSignature struct {
 	Signature [65]byte `json:"signature"`
 }
 
+// PubKeyEnumWeightPair defines a structure that holds a public key and its associated weight.
 type PubKeyEnumWeightPair struct {
 	PubKey []byte `json:"pubKey"`
 	Weight uint8  `json:"weight"`
 }
 
+// MultiSigPublicKeyStruct defines a structure that holds a map of public keys and their weights, along with a threshold.
 type MultiSigPublicKeyStruct struct {
 	PubKeyMap []*PubKeyEnumWeightPair `json:"pubKeymap"`
 	Threshold uint16                  `json:"threshold"`
 }
 
+// MultiSigStruct defines a structure that holds a list of compressed signatures, a bitmap, and a multisig public key.
 type MultiSigStruct struct {
 	Sigs           []CompressedSignature   `json:"sigs"`
 	Bitmap         uint16                  `json:"bitmap"`
 	MultisigPubKey MultiSigPublicKeyStruct `json:"multisigPubKey"`
 }
 
+// MultiSigPublicKeyPair defines a structure that holds a weight and a public key for multisig operations.
 type MultiSigPublicKeyPair struct {
 	Weight    uint8     `json:"weight"`
 	PublicKey PublicKey `json:"publicKey"`
@@ -37,6 +42,7 @@ var (
 	_ bcs.Unmarshaler = (*PubKeyEnumWeightPair)(nil)
 )
 
+// MarshalBCS serializes the PubKeyEnumWeightPair into a BCS format.
 func (p PubKeyEnumWeightPair) MarshalBCS() ([]byte, error) {
 	switch len(p.PubKey) {
 	case 33:
@@ -57,6 +63,7 @@ func (p PubKeyEnumWeightPair) MarshalBCS() ([]byte, error) {
 	}
 }
 
+// UnmarshalBCS deserializes the PubKeyEnumWeightPair from a BCS format.
 func (p *PubKeyEnumWeightPair) UnmarshalBCS(r io.Reader) (int, error) {
 	pubkeyType, n, err := ReadByte(r)
 	if err != nil {
@@ -92,6 +99,7 @@ func (p *PubKeyEnumWeightPair) UnmarshalBCS(r io.Reader) (int, error) {
 	return n, nil
 }
 
+// ReadByte reads a single byte from the provided io.Reader.
 func ReadByte(r io.Reader) (byte, int, error) {
 	b := [1]byte{}
 	n, err := r.Read(b[:])

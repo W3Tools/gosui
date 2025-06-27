@@ -7,23 +7,28 @@ import (
 )
 
 const (
+	// SuiAddressLength is the length of a Sui address in bytes
 	SuiAddressLength = 32
-	TxDigestLength   = 32
+	// TxDigestLength is the length of a transaction digest in bytes
+	TxDigestLength = 32
 )
 
-// Returns whether the tx digest is valid based on the serialization format
+// IsValidTransactionDigest checks if a given transaction digest is valid.
 func IsValidTransactionDigest(v string) bool {
 	return true
 }
 
+// IsValidSuiAddress checks if a given Sui address is valid.
 func IsValidSuiAddress(v string) bool {
 	return IsHex(v) && GetHexByteLength(v) == SuiAddressLength
 }
 
-func IsValidSuiObjectId(v string) bool {
+// IsValidSuiObjectID checks if a given Sui object ID is valid.
+func IsValidSuiObjectID(v string) bool {
 	return IsValidSuiAddress(v)
 }
 
+// NormalizeSuiAddress normalizes a Sui address string to a standard format.
 /**
  * Perform the following operations:
  * 1. Make the address lower case
@@ -47,11 +52,13 @@ func NormalizeSuiAddress(v string) string {
 	return fmt.Sprintf("0x%s", strings.Repeat("0", SuiAddressLength*2-len(address))+address)
 }
 
+// NormalizeSuiObjectID normalizes a Sui object ID string to a standard format.
 // 0x1 -> 0x0000000000000000000000000000000000000000000000000000000000000001
-func NormalizeSuiObjectId(v string) string {
+func NormalizeSuiObjectID(v string) string {
 	return NormalizeSuiAddress(v)
 }
 
+// NormalizeSuiCoinType normalizes a Sui coin type string to a standard format.
 // 0x2::sui::SUI -> 0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI
 func NormalizeSuiCoinType(v string) string {
 	splits := strings.Split(v, "::")
@@ -62,6 +69,7 @@ func NormalizeSuiCoinType(v string) string {
 	return fmt.Sprintf("%s::%s::%s", NormalizeSuiAddress(splits[0]), splits[1], splits[2])
 }
 
+// NormalizeShortSuiAddress normalizes a short Sui address string.
 // 0x0000000000000000000000000000000000000000000000000000000000000001 -> 0x1
 func NormalizeShortSuiAddress(v string) string {
 	address := NormalizeSuiAddress(v)
@@ -76,11 +84,13 @@ func NormalizeShortSuiAddress(v string) string {
 	return "0x" + address
 }
 
+// NormalizeShortSuiObjectID normalizes a short Sui object ID string.
 // 0x0000000000000000000000000000000000000000000000000000000000000001 -> 0x1
-func NormalizeShortSuiObjectId(v string) string {
+func NormalizeShortSuiObjectID(v string) string {
 	return NormalizeShortSuiAddress(v)
 }
 
+// NormalizeShortSuiCoinType normalizes a short Sui coin type string.
 // 0x2::sui::SUI -> 0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI
 func NormalizeShortSuiCoinType(v string) string {
 	splits := strings.Split(v, "::")
@@ -91,6 +101,7 @@ func NormalizeShortSuiCoinType(v string) string {
 	return fmt.Sprintf("%s::%s::%s", NormalizeShortSuiAddress(splits[0]), splits[1], splits[2])
 }
 
+// IsHex checks if a string is a valid hexadecimal representation.
 func IsHex(v string) bool {
 	re := regexp.MustCompile(`^(0x|0X)?[a-fA-F0-9]+$`)
 
@@ -101,6 +112,7 @@ func IsHex(v string) bool {
 	return len(v)%2 == 0
 }
 
+// GetHexByteLength returns the number of bytes represented by a hex string.
 func GetHexByteLength(v string) int {
 	if strings.HasPrefix(v, "0x") || strings.HasPrefix(v, "0X") {
 		v = v[2:]

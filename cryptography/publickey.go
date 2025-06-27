@@ -11,6 +11,7 @@ import (
 	"golang.org/x/crypto/blake2b"
 )
 
+// PublicKey is an interface that defines the methods for a public key in the Sui cryptography system.
 type PublicKey interface {
 	Equals(publicKey PublicKey) bool
 	ToBase64() string
@@ -25,37 +26,36 @@ type PublicKey interface {
 	Verify(message []byte, signature SerializedSignature) (bool, error)
 }
 
+// BasePublicKey defines a struct that implements the PublicKey interface.
 type BasePublicKey struct {
 	self PublicKey
 }
 
-// Checks if two public keys are equal
+// Equals checks if the provided public key is equal to the base public key.
 func (base *BasePublicKey) Equals(publicKey PublicKey) bool {
 	return reflect.DeepEqual(base.self.ToRawBytes(), publicKey.ToRawBytes())
 }
 
-// Return the base-64 representation of the public key
+// ToBase64 returns the base-64 representation of the public key.
 func (base *BasePublicKey) ToBase64() string {
 	return b64.ToBase64(base.self.ToRawBytes())
 }
 
-/*
- * Return the Sui representation of the public key encoded in
- * base-64. A Sui public key is formed by the concatenation
- * of the scheme flag with the raw bytes of the public key
- */
+// ToSuiPublicKey returns the Sui representation of the public key encoded in base-64.
+// A Sui public key is formed by the concatenation of the scheme flag with the raw bytes of the public key
 func (base *BasePublicKey) ToSuiPublicKey() string {
 	suiBytes := base.ToSuiBytes()
 	return b64.ToBase64(suiBytes)
 }
 
+// VerifyWithIntent verifies that the signature is valid for the provided message bytes and intent.
 func (base *BasePublicKey) VerifyWithIntent(bs []byte, signature SerializedSignature, intent IntentScope) (bool, error) {
 	intentMessage := MessageWithIntent(intent, bs)
 	digest := blake2b.Sum256(intentMessage)
 	return base.self.Verify(digest[:], signature)
 }
 
-// Verifies that the signature is valid for for the provided PersonalMessage
+// VerifyPersonalMessage verifies that the signature is valid for the provided personal message.
 func (base *BasePublicKey) VerifyPersonalMessage(message []byte, signature SerializedSignature) (bool, error) {
 	msg, err := bcs.Marshal(message)
 	if err != nil {
@@ -64,15 +64,12 @@ func (base *BasePublicKey) VerifyPersonalMessage(message []byte, signature Seria
 	return base.VerifyWithIntent(msg, signature, PersonalMessage)
 }
 
-// Verifies that the signature is valid for for the provided TransactionBlock
+// VerifyTransactionBlock verifies that the signature is valid for the provided transaction block.
 func (base *BasePublicKey) VerifyTransactionBlock(transactionBlock []byte, signature SerializedSignature) (bool, error) {
 	return base.VerifyWithIntent(transactionBlock, signature, TransactionData)
 }
 
-/**
- * Returns the bytes representation of the public key
- * prefixed with the signature scheme flag
- */
+// ToSuiBytes returns the bytes representation of the public key prefixed with the signature scheme flag.
 func (base *BasePublicKey) ToSuiBytes() []byte {
 	rawBytes := base.self.ToRawBytes()
 	suiBytes := new(bytes.Buffer)
@@ -82,7 +79,7 @@ func (base *BasePublicKey) ToSuiBytes() []byte {
 	return suiBytes.Bytes()
 }
 
-// Return the Sui address associated with this Ed25519 public key
+// ToSuiAddress returns the Sui address associated with this public key.
 func (base *BasePublicKey) ToSuiAddress() string {
 	digest := blake2b.Sum256(base.ToSuiBytes())
 	return utils.NormalizeSuiAddress(hex.EncodeToString(digest[:])[:utils.SuiAddressLength*2])
@@ -100,7 +97,7 @@ func (base *BasePublicKey) ToSuiAddress() string {
 //		return false, nil
 //	}
 
-// To ensure thread memory safety, this method needs to be removed. This matter is temporarily added to the todo list
+// SetSelf sets the self reference for the BasePublicKey.
 func (base *BasePublicKey) SetSelf(pubkey PublicKey) {
 	base.self = pubkey
 }

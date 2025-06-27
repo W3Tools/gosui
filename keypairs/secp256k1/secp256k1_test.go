@@ -11,7 +11,7 @@ import (
 )
 
 func TestGenerateAndVerifySecp256k1Keypair(t *testing.T) {
-	keypair, err := secp256k1.GenerateSecp256k1Keypair()
+	keypair, err := secp256k1.GenerateKeypair()
 	if err != nil {
 		t.Fatalf("unable to generate Secp256k1 keypair, msg: %v", err)
 	}
@@ -137,7 +137,7 @@ func TestDeriveSecp256k1KeypairFromMnemonic(t *testing.T) {
 		t.Fatalf("unable to generate mnemonic, msg: %v", err)
 	}
 
-	keypair, err := secp256k1.DeriveKeypair(mnemonic, secp256k1.DefaultSecp256k1DerivationPath)
+	keypair, err := secp256k1.DeriveKeypair(mnemonic, secp256k1.DefaultDerivationPath)
 	if err != nil {
 		t.Fatalf("unable to derive Secp256k1 keypair, msg: %v", err)
 	}
