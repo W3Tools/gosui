@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"golang.org/x/crypto/blake2b"
 )
 
@@ -18,11 +17,18 @@ func B64ToSuiPrivateKey(b64 string) (string, error) {
 		return "", err
 	}
 
-	hexPriKey := hexutil.Encode(b64Decode)
+	hexPriKey := bytesEncodeToHex(b64Decode)
 	if len(hexPriKey) != 68 {
 		return "", fmt.Errorf("unknown base64. %s", b64)
 	}
 	return fmt.Sprintf("0x%s", hexPriKey[4:]), nil
+}
+
+func bytesEncodeToHex(b []byte) string {
+	enc := make([]byte, len(b)*2+2)
+	copy(enc, "0x")
+	hex.Encode(enc[2:], b)
+	return string(enc)
 }
 
 // SuiPrivateKeyToB64 converts a Sui private key in hex format to a base64 encoded string.
