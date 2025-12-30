@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"regexp"
 
-	"github.com/tyler-smith/go-bip39"
+	"github.com/W3Tools/gobip/bip39"
 )
 
 // IsValidHardenedPath checks if a given path is compliant with SLIP-0010 m/44'/784'/{account_index}'/{change_index}'/{address_index}'.

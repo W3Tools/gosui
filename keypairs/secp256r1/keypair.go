@@ -11,8 +11,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/W3Tools/gobip/bip32"
 	"github.com/W3Tools/gosui/cryptography"
-	"github.com/tyler-smith/go-bip32"
 	"golang.org/x/crypto/blake2b"
 )
 

@@ -5,9 +5,9 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/W3Tools/gobip/bip39"
 	"github.com/W3Tools/gosui/cryptography"
 	"github.com/W3Tools/gosui/keypairs/secp256k1"
-	"github.com/tyler-smith/go-bip39"
 )
 
 func TestGenerateAndVerifySecp256k1Keypair(t *testing.T) {

@@ -4,8 +4,8 @@ import (
 	"encoding/hex"
 	"testing"
 
+	"github.com/W3Tools/gobip/bip39"
 	"github.com/W3Tools/gosui/cryptography"
-	"github.com/tyler-smith/go-bip39"
 )
 
 func TestIsValidHardenedPath(t *testing.T) {

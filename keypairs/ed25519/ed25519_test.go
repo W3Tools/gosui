@@ -6,10 +6,10 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/W3Tools/gobip/bip39"
 	"github.com/W3Tools/gosui/cryptography"
 	ed25519_keypair "github.com/W3Tools/gosui/keypairs/ed25519"
 	"github.com/fardream/go-bcs/bcs"
-	"github.com/tyler-smith/go-bip39"
 )
 
 func TestGenerateAndVerifyEd25519Keypair(t *testing.T) {
